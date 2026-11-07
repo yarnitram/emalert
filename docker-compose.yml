@@ -9,5 +9,14 @@ services:
       - radar-data:/data
     ports:
       - "127.0.0.1:8000:8000"
+  scanner:
+    profiles: ["live"]
+    build: .
+    command: ["python", "-u", "-m", "app.live", "${EMALERT_SYMBOL:-BTC_USDT}", "${EMALERT_TICK_SIZE:-0.1}", "--continuous"]
+    environment:
+      EMALERT_DB_PATH: /data/ema_radar.sqlite3
+    volumes:
+      - radar-data:/data
+    restart: unless-stopped
 volumes:
   radar-data:

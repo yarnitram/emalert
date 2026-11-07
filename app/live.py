@@ -30,7 +30,7 @@ def decode_trades(message: dict, symbol: str, received: datetime) -> list[Tick]:
     return sorted(ticks, key=lambda tick: tick.event_time)
 
 
-async def session(scanner: OfflineScanner, path: Path, duration: int) -> None:
+async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> None:
     from websockets.asyncio.client import connect
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,7 +77,7 @@ async def session(scanner: OfflineScanner, path: Path, duration: int) -> None:
                             print(f"{scanner.symbol} EMA {scanner.ema.period} {result} at {tick.price}", flush=True)
 
 
-async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
+async def run(scanner: OfflineScanner, path: Path, duration: int | None) -> None:
     from websockets.exceptions import WebSocketException
 
     async with asyncio.timeout(duration):
@@ -92,7 +92,7 @@ async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
                 delay = min(delay * 2, 15)
 
 
-async def watch(symbols: dict[str, Decimal], path: Path, duration: int) -> None:
+async def watch(symbols: dict[str, Decimal], path: Path, duration: int | None) -> None:
     async def scan(symbol: str, tick_size: Decimal, offset: int) -> None:
         await asyncio.sleep(offset)
         try:
@@ -109,7 +109,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("symbol")
     parser.add_argument("tick_size", type=Decimal)
-    parser.add_argument("--duration", type=int, default=30)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--duration", type=int, default=30)
+    mode.add_argument("--continuous", action="store_true")
     parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
@@ -126,4 +128,4 @@ if __name__ == "__main__":
     if any(not size.is_finite() or size <= 0 for size in symbols.values()):
         parser.error("Tick sizes must be positive finite numbers")
     asyncio.run(watch(symbols, Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")),
-                      args.duration))
+                      None if args.continuous else args.duration))

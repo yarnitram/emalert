@@ -38,8 +38,10 @@ alignment. This does not measure network latency. The bounded watchlist uses
 one connection per symbol, staggers startup, and caps the list at five symbols.
 BTC_USDT and ETH_USDT both warmed and received trades in a single live run.
 Use `python -m app.live BTC_USDT 0.1 --watch ETH_USDT:0.01 --duration 30`
-with tick sizes verified for your contracts. Continuous operation, sampled
-ticker fallback, and custom/calendar intervals are pending.
+with tick sizes verified for your contracts. The opt-in Compose live profile
+runs a continuous single-symbol worker. Docker smoke verification covered live
+BTC_USDT ingestion and localhost alert history. Sampled ticker fallback,
+long-running verification, and custom/calendar intervals are pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
