@@ -113,11 +113,11 @@ async def run(scanner: OfflineScanner, path: Path, duration: int | None) -> None
                 delay = min(delay * 2, 15)
 
 
-async def watch(symbols: dict[str, Decimal], path: Path, duration: int | None) -> None:
+async def watch(symbols: dict[str, Decimal], path: Path, duration: int | None, seconds: int = 60) -> None:
     async def scan(symbol: str, tick_size: Decimal, offset: int) -> None:
         await asyncio.sleep(offset)
         try:
-            await run(OfflineScanner(symbol, 60, 200, tick_size), path, duration)
+            await run(OfflineScanner(symbol, seconds, 200, tick_size), path, duration)
         except TimeoutError:
             print(f"{symbol}: probe window ended.", flush=True)
 
@@ -134,6 +134,7 @@ if __name__ == "__main__":
     mode.add_argument("--duration", type=int, default=30)
     mode.add_argument("--continuous", action="store_true")
     parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
+    parser.add_argument("--timeframe", choices=("1m", "3m"), default="1m")
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
     for entry in args.watch:
@@ -149,4 +150,5 @@ if __name__ == "__main__":
     if any(not size.is_finite() or size <= 0 for size in symbols.values()):
         parser.error("Tick sizes must be positive finite numbers")
     asyncio.run(watch(symbols, Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")),
-                      None if args.continuous else args.duration))
+                      None if args.continuous else args.duration,
+                      180 if args.timeframe == "3m" else 60))

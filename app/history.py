@@ -17,6 +17,7 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
     data = payload["data"]
     rows = {}
     current = bucket_start(as_of, scanner.seconds)
+    source_seconds = 60 if scanner.seconds == 180 else scanner.seconds
     for timestamp, value in zip(data["time"], data["close"], strict=True):
         if type(timestamp) is not int:
             raise ValueError("Expected Unix seconds")
@@ -24,11 +25,18 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
         if at >= current:
             continue
         price = Decimal(str(value))
-        if at != bucket_start(at, scanner.seconds) or not price.is_finite() or price <= 0:
+        if at != bucket_start(at, source_seconds) or not price.is_finite() or price <= 0:
             raise ValueError("Invalid candle")
         if at in rows and rows[at] != price:
             raise ValueError("Conflicting candle closes")
         rows[at] = price
+    if scanner.seconds == 180:
+        minute = timedelta(minutes=1)
+        rows = {
+            at: rows[at + 2 * minute]
+            for at in rows
+            if at == bucket_start(at, 180) and at + minute in rows and at + 2 * minute in rows
+        }
     step = timedelta(seconds=scanner.seconds)
     ordered = sorted(rows)
     if (len(ordered) < scanner.ema.period or ordered[-1] != current - step
@@ -42,9 +50,9 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
 def bootstrap(scanner: OfflineScanner, as_of: datetime) -> int:
     if not re.fullmatch(r"[A-Z0-9]+_[A-Z0-9]+", scanner.symbol):
         raise ValueError("Invalid MEXC symbol")
-    interval = INTERVALS[scanner.seconds]
+    interval = "Min1" if scanner.seconds == 180 else INTERVALS[scanner.seconds]
     end = int(bucket_start(as_of, scanner.seconds).timestamp()) - 1
-    start = end - scanner.seconds * 1000 + 1
+    start = end - scanner.seconds * (666 if scanner.seconds == 180 else 1000) + 1
     url = (
         f"https://api.mexc.com/api/v1/contract/kline/{scanner.symbol}"
         f"?interval={interval}&start={start}&end={end}"

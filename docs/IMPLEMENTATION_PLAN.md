@@ -51,8 +51,10 @@ root with dependencies installed. The live Docker worker logged seven consecutiv
 minute rollovers, SQLite quick check returned ok, and the alert API returned 200.
 A separate live probe resumed trades after an injected disconnect. Two fresh
 containers sharing an isolated volume verified that a fixture alert and cooldown
-survive container replacement. An extended soak and custom/calendar intervals
-remain pending.
+survive container replacement. The CLI supports 3m EMA input built from three
+confirmed 1m closes per bucket. A live BTC_USDT probe seeded 666 complete
+buckets and received trades. An extended soak and other custom/calendar
+intervals remain pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.

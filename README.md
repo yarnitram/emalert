@@ -10,3 +10,6 @@ with a tick size of 0.1. Set `EMALERT_SYMBOL` and `EMALERT_TICK_SIZE` for anothe
 contract. Inspect worker output with `docker compose logs -f scanner` and read
 alert history at `http://127.0.0.1:8000/api/alerts`. Both services share a
 persistent SQLite volume. The CLI also accepts up to five symbols for a watchlist.
+For a bounded 3-minute EMA 200 probe, run
+`python -m app.live BTC_USDT 0.1 --timeframe 3m --duration 30`.
+The probe builds each closed EMA input from three confirmed 1-minute candles.
