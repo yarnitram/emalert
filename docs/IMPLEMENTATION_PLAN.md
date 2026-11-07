@@ -27,7 +27,9 @@ Detection writes the alert outbox row and cooldown checkpoint in one SQLite
 transaction. Pending rows can be recovered and acknowledged. Delivery adapters,
 retry scheduling, and multi-channel delivery tracking are deferred. The local
 `GET /api/alerts` endpoint reads persisted alerts and returns 503 until the
-outbox database is initialized. Live ingestion is the next priority.
+outbox database is initialized. REST bootstrap seeded EMA 200 from 1,000
+confirmed BTC_USDT 1m candles in a live probe. Next: bounded WebSocket ingestion
+and confirmed candle rollover. Custom and calendar intervals are pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
