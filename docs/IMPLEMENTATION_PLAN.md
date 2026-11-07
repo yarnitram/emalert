@@ -55,7 +55,10 @@ survive container replacement. The CLI supports 3m EMA input built from three
 confirmed 1m closes per bucket. A live BTC_USDT probe seeded 666 complete
 buckets and received trades. Live BTC_USDT REST warmup also passed for 10m
 (1,000 buckets), 2h (1,000), and 12h (666). The CLI exposes all four custom
-intervals. An extended soak and calendar intervals remain pending.
+intervals. Docker now accepts `EMALERT_WATCH` and `EMALERT_TIMEFRAME`.
+An isolated continuous-mode smoke test warmed BTC_USDT and ETH_USDT on 2h
+and received trades for both. This short run did not cross a 2h boundary.
+Live 2h/12h rollover, an extended soak, and calendar intervals remain pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.

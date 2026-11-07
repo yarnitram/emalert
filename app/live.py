@@ -137,7 +137,8 @@ if __name__ == "__main__":
     parser.add_argument("--timeframe", choices=TIMEFRAMES, default="1m")
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
-    for entry in args.watch:
+    configured_watch = os.getenv("EMALERT_WATCH", "")
+    for entry in [*filter(None, configured_watch.split(",")), *args.watch]:
         symbol, separator, size = entry.partition(":")
         if not separator or not symbol or symbol in symbols:
             parser.error("--watch requires a unique SYMBOL:TICK_SIZE")
