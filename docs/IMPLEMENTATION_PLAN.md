@@ -19,8 +19,10 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 
 ## M2 — Local live MVP
 
-Entry gate: wire the closed/provisional EMA into the offline scanner and verify
-gap handling, deduplication, and replay. The localhost Compose binding is in place.
+The fixed-interval offline scanner now consumes confirmed candle closes and
+detects intrabar contacts and crosses. A deterministic fixture covers duplicate
+observations and a feed gap. Before live integration, add exchange trade-ID
+deduplication, broader replay coverage, and persisted alert state.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
