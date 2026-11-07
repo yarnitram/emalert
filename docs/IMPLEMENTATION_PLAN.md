@@ -25,7 +25,9 @@ observations and a feed gap. The scanner also tracks the latest 4,096 trade IDs
 in memory and can restore the last alert time from SQLite after restart.
 Detection writes the alert outbox row and cooldown checkpoint in one SQLite
 transaction. Pending rows can be recovered and acknowledged. Delivery adapters,
-retry scheduling, and multi-channel delivery tracking are still pending.
+retry scheduling, and multi-channel delivery tracking are deferred. The local
+`GET /api/alerts` endpoint reads persisted alerts and returns 503 until the
+outbox database is initialized. Live ingestion is the next priority.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
