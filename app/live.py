@@ -30,20 +30,23 @@ def decode_trades(message: dict, symbol: str, received: datetime) -> list[Tick]:
     return sorted(ticks, key=lambda tick: tick.event_time)
 
 
-async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
+async def session(scanner: OfflineScanner, path: Path, duration: int) -> None:
     from websockets.asyncio.client import connect
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(path)) as database:
         sink = CheckpointedScanner(scanner, database)
-        await asyncio.to_thread(bootstrap, scanner, datetime.now(timezone.utc))
         async with asyncio.timeout(duration):
             async with connect("wss://contract.mexc.com/edge", open_timeout=10,
                                max_queue=16, max_size=1_000_000) as socket:
                 await socket.send(json.dumps({"method": "sub.deal", "param": {"symbol": scanner.symbol}}))
                 loop = asyncio.get_running_loop()
                 ping_at = loop.time()
+                last_trade_at = ping_at
+                reported_trade = False
                 while True:
+                    if loop.time() - last_trade_at > 30:
+                        raise ConnectionError("Trade feed idle for 30 seconds")
                     if loop.time() >= ping_at:
                         await socket.send('{"method":"ping"}')
                         ping_at = loop.time() + 15
@@ -51,18 +54,42 @@ async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
                         frame = await asyncio.wait_for(socket.recv(), timeout=max(0.01, ping_at - loop.time()))
                     except TimeoutError:
                         continue
-                    received = datetime.now(timezone.utc)
-                    for tick in decode_trades(json.loads(frame, parse_float=Decimal), scanner.symbol, received):
+                    message = json.loads(frame, parse_float=Decimal)
+                    if message.get("channel") != "push.deal":
+                        continue
+                    # Compare exchange timestamps on the same clock for this probe.
+                    received = datetime.fromtimestamp(int(message["ts"]) / 1000, timezone.utc)
+                    for tick in decode_trades(message, scanner.symbol, received):
                         current = bucket_start(received, scanner.seconds)
                         if bucket_start(tick.event_time, scanner.seconds) != current:
                             continue
                         if scanner.closed_bucket != current - timedelta(seconds=scanner.seconds):
-                            await asyncio.to_thread(bootstrap, scanner, received)
+                            refreshed = await asyncio.to_thread(bootstrap, scanner, received)
+                            print(f"Refreshed confirmed history ({refreshed} candles)", flush=True)
                             scanner.reset_feed()
                             break
+                        last_trade_at = loop.time()
+                        if not reported_trade:
+                            print(f"Received {scanner.symbol} trade at {tick.event_time.isoformat()}", flush=True)
+                            reported_trade = True
                         result = sink.observe(tick)
                         if result:
                             print(f"{scanner.symbol} EMA {scanner.ema.period} {result} at {tick.price}", flush=True)
+
+
+async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
+    from websockets.exceptions import WebSocketException
+
+    async with asyncio.timeout(duration):
+        delay = 1
+        while True:
+            scanner.reset_feed()
+            try:
+                await session(scanner, path, duration)
+            except (OSError, WebSocketException, ValueError) as exc:
+                print(f"Feed interrupted: {exc}. Reconnecting in {delay}s.", flush=True)
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, 15)
 
 
 if __name__ == "__main__":
