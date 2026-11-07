@@ -44,8 +44,11 @@ BTC_USDT ingestion and localhost alert history. After five seconds without
 trades, the worker can use per-symbol last-price snapshots labeled
 `LIVE_TICKER_SAMPLED`. Switching source resets the crossing baseline.
 An offline regression covers trade-to-ticker and ticker-to-trade transitions,
-including a valid cross after trades resume. A forced live failover and
-long-running verification are pending, along with custom/calendar intervals.
+including a valid cross after trades resume. A controlled live BTC_USDT probe
+verified trade → sampled ticker → trade by filtering trade frames in a separate
+process. Reproduce with `python -m scripts.probe_failover` from the repository
+root with dependencies installed. Long-running verification and custom/calendar
+intervals are pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
