@@ -10,7 +10,10 @@ from .scanner import OfflineScanner
 INTERVALS = {60: "Min1", 300: "Min5", 900: "Min15", 1800: "Min30",
              3600: "Min60", 14400: "Hour4", 28800: "Hour8", 86400: "Day1"}
 SOURCE_SECONDS = {180: 60, 600: 300, 7200: 3600, 43200: 14400}
-TIMEFRAMES = {"1m": 60, "3m": 180, "10m": 600, "2h": 7200, "12h": 43200}
+TIMEFRAMES = {
+    "1m": 60, "3m": 180, "5m": 300, "10m": 600, "15m": 900, "30m": 1800,
+    "1h": 3600, "2h": 7200, "4h": 14400, "8h": 28800, "12h": 43200, "1D": 86400,
+}
 
 
 def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int:

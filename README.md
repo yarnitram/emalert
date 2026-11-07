@@ -15,5 +15,6 @@ symbols (comma-separated, up to five total), and set `EMALERT_TIMEFRAME` to
 select one interval for the watchlist. Verify the tick sizes for your contracts.
 For a bounded 3-minute EMA 200 probe, run
 `python -m app.live BTC_USDT 0.1 --timeframe 3m --duration 30`.
-The CLI also accepts `--timeframe 10m`, `2h`, and `12h`. Each custom EMA
+The CLI and Docker setting support 1m, 3m, 5m, 10m, 15m, 30m, 1h, 2h, 4h,
+8h, 12h, and 1D. Each custom EMA
 input requires a complete set of confirmed source candles.

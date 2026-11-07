@@ -70,6 +70,10 @@ or container restarts, and HTTP 200 from the alert API. Isolated BTC_USDT
 post-boundary output with `docker logs emalert-rollover-2h` and
 `docker logs emalert-rollover-12h`. The bounded probes retain logs after exit.
 
+All 12 fixed intervals are selectable in the CLI and Compose. BTC_USDT
+REST warmup loaded 1,000 confirmed candles each on the newly exposed native
+5m, 15m, 30m, 1h, 4h, 8h, and 1D intervals.
+
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
 - Add dry-run Telegram/Discord adapters and local health/status/contracts/alerts endpoints.
