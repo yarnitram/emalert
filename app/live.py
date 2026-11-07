@@ -48,6 +48,12 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
     path.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(path)) as database:
         sink = CheckpointedScanner(scanner, database)
+        with database:
+            database.execute(
+                "CREATE TABLE IF NOT EXISTS scanner_status (symbol TEXT, seconds INTEGER, "
+                "period INTEGER, feed_tier TEXT, observed_at REAL, "
+                "PRIMARY KEY (symbol, seconds, period))"
+            )
         async with asyncio.timeout(duration):
             async with connect("wss://contract.mexc.com/edge", open_timeout=10,
                                max_queue=16, max_size=1_000_000) as socket:
@@ -58,6 +64,7 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                 last_trade_at = ping_at
                 last_observation_at = ping_at
                 reported_tier = None
+                heartbeat_at = ping_at
                 while True:
                     if loop.time() - last_observation_at > 30:
                         raise ConnectionError("Market feed idle for 30 seconds")
@@ -90,6 +97,13 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                         last_observation_at = loop.time()
                         if channel == "push.deal":
                             last_trade_at = last_observation_at
+                        if last_observation_at >= heartbeat_at or reported_tier != tick.feed_tier:
+                            with database:
+                                database.execute(
+                                    "INSERT OR REPLACE INTO scanner_status VALUES (?, ?, ?, ?, ?)",
+                                    (*sink.key, tick.feed_tier, datetime.now(timezone.utc).timestamp()),
+                                )
+                            heartbeat_at = last_observation_at + 5
                         if reported_tier != tick.feed_tier:
                             print(f"{scanner.symbol} feed: {tick.feed_tier}", flush=True)
                             reported_tier = tick.feed_tier

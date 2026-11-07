@@ -2,6 +2,7 @@ import os
 import sqlite3
 from contextlib import closing
 from pathlib import Path
+from time import time
 
 from fastapi import FastAPI, HTTPException, Query
 
@@ -9,8 +10,33 @@ app = FastAPI(title="Emalert")
 
 
 @app.get("/health")
+@app.get("/health/live")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "emalert"}
+
+
+@app.get("/api/status")
+def status() -> dict:
+    path = Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")).resolve()
+    try:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
+            db.row_factory = sqlite3.Row
+            rows = db.execute("SELECT * FROM scanner_status ORDER BY symbol, seconds, period").fetchall()
+    except sqlite3.Error as exc:
+        if "no such table" in str(exc) or not path.exists():
+            rows = []
+        else:
+            raise HTTPException(503, "Scanner status unavailable") from exc
+    now = time()
+    feeds = [dict(row, fresh=0 <= now - row["observed_at"] <= 30) for row in rows]
+    return {"ready": any(feed["fresh"] for feed in feeds), "feeds": feeds}
+
+
+@app.get("/health/ready")
+def ready() -> dict:
+    if not status()["ready"]:
+        raise HTTPException(503, "Waiting for a fresh scanner observation")
+    return {"status": "ready"}
 
 
 @app.get("/api/alerts")

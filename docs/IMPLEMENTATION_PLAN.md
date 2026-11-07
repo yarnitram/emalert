@@ -80,6 +80,10 @@ remains unverified live. Offline regression tests cover week transitions
 across New Year and month transitions through leap February, including
 exclusion of the open candle and intrabar crossing after warmup.
 
+Local status now exposes per-profile heartbeats and feed tiers. Readiness
+requires at least one fresh observation. Docker checks covered empty, fresh,
+and stale readiness states.
+
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
 - Add dry-run Telegram/Discord adapters and local health/status/contracts/alerts endpoints.
