@@ -1,0 +1,8 @@
+services:
+  radar:
+    build: .
+    environment:
+      MEXC_BASE_URL: https://contract.mexc.com
+      MEXC_WS_URL: wss://contract.mexc.com/edge
+    ports:
+      - "8000:8000"
