@@ -59,6 +59,9 @@ intervals. Docker now accepts `EMALERT_WATCH` and `EMALERT_TIMEFRAME`.
 An isolated continuous-mode smoke test warmed BTC_USDT and ETH_USDT on 2h
 and received trades for both. This short run did not cross a 2h boundary.
 Live 2h/12h rollover, an extended soak, and calendar intervals remain pending.
+Offline rollover tests pass for 2h and 12h. They verify that a missing final
+source candle blocks the EMA update and that replaying complete history does
+not apply the same close twice. Docker pytest: 15 passed.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
