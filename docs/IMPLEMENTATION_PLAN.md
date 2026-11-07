@@ -19,6 +19,9 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 
 ## M2 — Local live MVP
 
+Entry gate: wire the closed/provisional EMA into the offline scanner and verify
+gap handling, deduplication, and replay. The localhost Compose binding is in place.
+
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
 - Add dry-run Telegram/Discord adapters and local health/status/contracts/alerts endpoints.
