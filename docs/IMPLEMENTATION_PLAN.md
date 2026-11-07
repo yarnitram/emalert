@@ -76,7 +76,9 @@ REST warmup loaded 1,000 confirmed candles each on the newly exposed native
 
 Calendar warmup verified on BTC_USDT: 335 Monday-aligned weekly closes for
 EMA 200 and 77 month-aligned closes for EMA 20. Calendar boundary rollover
-remains unverified live.
+remains unverified live. Offline regression tests cover week transitions
+across New Year and month transitions through leap February, including
+exclusion of the open candle and intrabar crossing after warmup.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
