@@ -82,7 +82,9 @@ exclusion of the open candle and intrabar crossing after warmup.
 
 Local status now exposes per-profile heartbeats and feed tiers. Readiness
 requires at least one fresh observation. Docker checks covered empty, fresh,
-and stale readiness states.
+and stale readiness states. A separate live Docker test reported fresh
+BTC_USDT and ETH_USDT trade feeds through the shared SQLite volume and
+returned HTTP 200 from readiness.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
