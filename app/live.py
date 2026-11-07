@@ -30,6 +30,18 @@ def decode_trades(message: dict, symbol: str, received: datetime) -> list[Tick]:
     return sorted(ticks, key=lambda tick: tick.event_time)
 
 
+def decode_ticker(message: dict, symbol: str, received: datetime) -> list[Tick]:
+    if message.get("channel") != "push.ticker":
+        return []
+    data = message.get("data")
+    if not isinstance(data, dict) or data.get("symbol", message.get("symbol")) != symbol:
+        return []
+    price = Decimal(str(data.get("lastPrice", "NaN")))
+    if not price.is_finite() or price <= 0:
+        return []
+    return [Tick(symbol, price, received, received, feed_tier="LIVE_TICKER_SAMPLED")]
+
+
 async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> None:
     from websockets.asyncio.client import connect
 
@@ -40,13 +52,15 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
             async with connect("wss://contract.mexc.com/edge", open_timeout=10,
                                max_queue=16, max_size=1_000_000) as socket:
                 await socket.send(json.dumps({"method": "sub.deal", "param": {"symbol": scanner.symbol}}))
+                await socket.send(json.dumps({"method": "sub.ticker", "param": {"symbol": scanner.symbol}}))
                 loop = asyncio.get_running_loop()
                 ping_at = loop.time()
                 last_trade_at = ping_at
-                reported_trade = False
+                last_observation_at = ping_at
+                reported_tier = None
                 while True:
-                    if loop.time() - last_trade_at > 30:
-                        raise ConnectionError("Trade feed idle for 30 seconds")
+                    if loop.time() - last_observation_at > 30:
+                        raise ConnectionError("Market feed idle for 30 seconds")
                     if loop.time() >= ping_at:
                         await socket.send('{"method":"ping"}')
                         ping_at = loop.time() + 15
@@ -55,11 +69,16 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                     except TimeoutError:
                         continue
                     message = json.loads(frame, parse_float=Decimal)
-                    if message.get("channel") != "push.deal":
+                    channel = message.get("channel")
+                    if channel not in {"push.deal", "push.ticker"}:
+                        continue
+                    if channel == "push.ticker" and loop.time() - last_trade_at <= 5:
                         continue
                     # Compare exchange timestamps on the same clock for this probe.
                     received = datetime.fromtimestamp(int(message["ts"]) / 1000, timezone.utc)
-                    for tick in decode_trades(message, scanner.symbol, received):
+                    ticks = (decode_trades(message, scanner.symbol, received) if channel == "push.deal"
+                             else decode_ticker(message, scanner.symbol, received))
+                    for tick in ticks:
                         current = bucket_start(received, scanner.seconds)
                         if bucket_start(tick.event_time, scanner.seconds) != current:
                             continue
@@ -68,10 +87,12 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                             print(f"Refreshed confirmed history ({refreshed} candles)", flush=True)
                             scanner.reset_feed()
                             break
-                        last_trade_at = loop.time()
-                        if not reported_trade:
-                            print(f"Received {scanner.symbol} trade at {tick.event_time.isoformat()}", flush=True)
-                            reported_trade = True
+                        last_observation_at = loop.time()
+                        if channel == "push.deal":
+                            last_trade_at = last_observation_at
+                        if reported_tier != tick.feed_tier:
+                            print(f"{scanner.symbol} feed: {tick.feed_tier}", flush=True)
+                            reported_tier = tick.feed_tier
                         result = sink.observe(tick)
                         if result:
                             print(f"{scanner.symbol} EMA {scanner.ema.period} {result} at {tick.price}", flush=True)
