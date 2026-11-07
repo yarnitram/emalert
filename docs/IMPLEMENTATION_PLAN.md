@@ -74,6 +74,10 @@ All 12 fixed intervals are selectable in the CLI and Compose. BTC_USDT
 REST warmup loaded 1,000 confirmed candles each on the newly exposed native
 5m, 15m, 30m, 1h, 4h, 8h, and 1D intervals.
 
+Calendar warmup verified on BTC_USDT: 335 Monday-aligned weekly closes for
+EMA 200 and 77 month-aligned closes for EMA 20. Calendar boundary rollover
+remains unverified live.
+
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
 - Add dry-run Telegram/Discord adapters and local health/status/contracts/alerts endpoints.

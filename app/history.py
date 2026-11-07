@@ -4,15 +4,17 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from urllib.request import urlopen
 
-from .candles import bucket_start
+from .candles import MONTH, WEEK, bucket_start, previous_bucket
 from .scanner import OfflineScanner
 
 INTERVALS = {60: "Min1", 300: "Min5", 900: "Min15", 1800: "Min30",
-             3600: "Min60", 14400: "Hour4", 28800: "Hour8", 86400: "Day1"}
+             3600: "Min60", 14400: "Hour4", 28800: "Hour8", 86400: "Day1",
+             WEEK: "Week1", MONTH: "Month1"}
 SOURCE_SECONDS = {180: 60, 600: 300, 7200: 3600, 43200: 14400}
 TIMEFRAMES = {
     "1m": 60, "3m": 180, "5m": 300, "10m": 600, "15m": 900, "30m": 1800,
     "1h": 3600, "2h": 7200, "4h": 14400, "8h": 28800, "12h": 43200, "1D": 86400,
+    "1W": WEEK, "1M": MONTH,
 }
 
 
@@ -44,10 +46,9 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
             if at == bucket_start(at, scanner.seconds)
             and all(at + offset * step in rows for offset in range(1, parts))
         }
-    step = timedelta(seconds=scanner.seconds)
     ordered = sorted(rows)
-    if (len(ordered) < scanner.ema.period or ordered[-1] != current - step
-            or any(b - a != step for a, b in zip(ordered, ordered[1:]))):
+    if (len(ordered) < scanner.ema.period or ordered[-1] != previous_bucket(current, scanner.seconds)
+            or any(previous_bucket(b, scanner.seconds) != a for a, b in zip(ordered, ordered[1:]))):
         raise ValueError("Insufficient contiguous closed candles")
     for at in ordered:
         scanner.close(at, rows[at])
@@ -61,7 +62,7 @@ def bootstrap(scanner: OfflineScanner, as_of: datetime) -> int:
     interval = INTERVALS[source_seconds]
     end = int(bucket_start(as_of, scanner.seconds).timestamp()) - 1
     buckets = min(1000, 2000 // (scanner.seconds // source_seconds))
-    start = end - scanner.seconds * buckets + 1
+    start = max(0, end - scanner.seconds * buckets + 1)
     url = (
         f"https://api.mexc.com/api/v1/contract/kline/{scanner.symbol}"
         f"?interval={interval}&start={start}&end={end}"

@@ -2,7 +2,7 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from .candles import bucket_start
+from .candles import bucket_start, previous_bucket
 from .indicator import ClosedEMA
 from .models import Tick
 
@@ -31,7 +31,7 @@ class OfflineScanner:
         if self.closed_bucket is not None:
             if bucket <= self.closed_bucket:
                 return
-            if bucket - self.closed_bucket != timedelta(seconds=self.seconds):
+            if previous_bucket(bucket, self.seconds) != self.closed_bucket:
                 raise ValueError("missing confirmed candles")
         self.ema.close(price)
         self.closed_bucket = bucket
@@ -48,7 +48,7 @@ class OfflineScanner:
         bucket = bucket_start(tick.event_time, self.seconds)
         age = tick.receive_time - tick.event_time
         if (self.closed_bucket is None
-                or bucket - self.closed_bucket != timedelta(seconds=self.seconds)
+                or previous_bucket(bucket, self.seconds) != self.closed_bucket
                 or not timedelta(0) <= age <= timedelta(seconds=5)):
             self.reset_feed()
             return None

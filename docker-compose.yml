@@ -12,7 +12,7 @@ services:
   scanner:
     profiles: ["live"]
     build: .
-    command: ["python", "-u", "-m", "app.live", "${EMALERT_SYMBOL:-BTC_USDT}", "${EMALERT_TICK_SIZE:-0.1}", "--timeframe", "${EMALERT_TIMEFRAME:-1m}", "--continuous"]
+    command: ["python", "-u", "-m", "app.live", "${EMALERT_SYMBOL:-BTC_USDT}", "${EMALERT_TICK_SIZE:-0.1}", "--timeframe", "${EMALERT_TIMEFRAME:-1m}", "--ema", "${EMALERT_EMA:-200}", "--continuous"]
     environment:
       EMALERT_WATCH: "${EMALERT_WATCH:-}"
       EMALERT_DB_PATH: /data/ema_radar.sqlite3

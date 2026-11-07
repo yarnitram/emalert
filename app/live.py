@@ -5,11 +5,11 @@ import json
 import os
 import sqlite3
 from contextlib import closing
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from .candles import bucket_start
+from .candles import bucket_start, previous_bucket
 from .checkpoint import CheckpointedScanner
 from .history import TIMEFRAMES, bootstrap
 from .models import Tick
@@ -82,7 +82,7 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                         current = bucket_start(received, scanner.seconds)
                         if bucket_start(tick.event_time, scanner.seconds) != current:
                             continue
-                        if scanner.closed_bucket != current - timedelta(seconds=scanner.seconds):
+                        if scanner.closed_bucket != previous_bucket(current, scanner.seconds):
                             refreshed = await asyncio.to_thread(bootstrap, scanner, received)
                             print(f"Refreshed confirmed history ({refreshed} candles)", flush=True)
                             scanner.reset_feed()
@@ -113,11 +113,12 @@ async def run(scanner: OfflineScanner, path: Path, duration: int | None) -> None
                 delay = min(delay * 2, 15)
 
 
-async def watch(symbols: dict[str, Decimal], path: Path, duration: int | None, seconds: int = 60) -> None:
+async def watch(symbols: dict[str, Decimal], path: Path, duration: int | None, seconds: int = 60,
+                period: int = 200) -> None:
     async def scan(symbol: str, tick_size: Decimal, offset: int) -> None:
         await asyncio.sleep(offset)
         try:
-            await run(OfflineScanner(symbol, seconds, 200, tick_size), path, duration)
+            await run(OfflineScanner(symbol, seconds, period, tick_size), path, duration)
         except TimeoutError:
             print(f"{symbol}: probe window ended.", flush=True)
 
@@ -135,6 +136,7 @@ if __name__ == "__main__":
     mode.add_argument("--continuous", action="store_true")
     parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
     parser.add_argument("--timeframe", choices=TIMEFRAMES, default="1m")
+    parser.add_argument("--ema", type=int, choices=(20, 50, 100, 200), default=200)
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")
@@ -152,4 +154,4 @@ if __name__ == "__main__":
         parser.error("Tick sizes must be positive finite numbers")
     asyncio.run(watch(symbols, Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")),
                       None if args.continuous else args.duration,
-                      TIMEFRAMES[args.timeframe]))
+                      TIMEFRAMES[args.timeframe], args.ema))
