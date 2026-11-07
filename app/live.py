@@ -92,14 +92,38 @@ async def run(scanner: OfflineScanner, path: Path, duration: int) -> None:
                 delay = min(delay * 2, 15)
 
 
+async def watch(symbols: dict[str, Decimal], path: Path, duration: int) -> None:
+    async def scan(symbol: str, tick_size: Decimal, offset: int) -> None:
+        await asyncio.sleep(offset)
+        try:
+            await run(OfflineScanner(symbol, 60, 200, tick_size), path, duration)
+        except TimeoutError:
+            print(f"{symbol}: probe window ended.", flush=True)
+
+    async with asyncio.TaskGroup() as group:
+        for offset, (symbol, tick_size) in enumerate(symbols.items()):
+            group.create_task(scan(symbol, tick_size, offset))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("symbol")
     parser.add_argument("tick_size", type=Decimal)
     parser.add_argument("--duration", type=int, default=30)
+    parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
     args = parser.parse_args()
-    try:
-        asyncio.run(run(OfflineScanner(args.symbol, 60, 200, args.tick_size),
-                        Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")), args.duration))
-    except TimeoutError:
-        print("Probe timed out or reached its duration.")
+    symbols = {args.symbol: args.tick_size}
+    for entry in args.watch:
+        symbol, separator, size = entry.partition(":")
+        if not separator or not symbol or symbol in symbols:
+            parser.error("--watch requires a unique SYMBOL:TICK_SIZE")
+        try:
+            symbols[symbol] = Decimal(size)
+        except ArithmeticError:
+            parser.error("Invalid tick size")
+    if len(symbols) > 5 or args.duration <= 0:
+        parser.error("Use at most five symbols and a positive duration")
+    if any(not size.is_finite() or size <= 0 for size in symbols.values()):
+        parser.error("Tick sizes must be positive finite numbers")
+    asyncio.run(watch(symbols, Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")),
+                      args.duration))

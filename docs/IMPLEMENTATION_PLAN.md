@@ -34,8 +34,12 @@ and confirmed candle rollover. The single-symbol probe is available as
 trade feed and refreshes confirmed closes via REST at rollover. BTC_USDT live
 subscription and initial warmup were verified. The probe retries interrupted
 sessions with bounded backoff and uses exchange message time for candle
-alignment. This does not measure network latency. Continuous multi-symbol
-operation, sampled ticker fallback, and custom/calendar intervals are pending.
+alignment. This does not measure network latency. The bounded watchlist uses
+one connection per symbol, staggers startup, and caps the list at five symbols.
+BTC_USDT and ETH_USDT both warmed and received trades in a single live run.
+Use `python -m app.live BTC_USDT 0.1 --watch ETH_USDT:0.01 --duration 30`
+with tick sizes verified for your contracts. Continuous operation, sampled
+ticker fallback, and custom/calendar intervals are pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
