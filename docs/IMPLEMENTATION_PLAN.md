@@ -43,7 +43,9 @@ runs a continuous single-symbol worker. Docker smoke verification covered live
 BTC_USDT ingestion and localhost alert history. After five seconds without
 trades, the worker can use per-symbol last-price snapshots labeled
 `LIVE_TICKER_SAMPLED`. Switching source resets the crossing baseline.
-Long-running verification and custom/calendar intervals are pending.
+An offline regression covers trade-to-ticker and ticker-to-trade transitions,
+including a valid cross after trades resume. A forced live failover and
+long-running verification are pending, along with custom/calendar intervals.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
