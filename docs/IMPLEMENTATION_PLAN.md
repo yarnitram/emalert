@@ -29,7 +29,10 @@ retry scheduling, and multi-channel delivery tracking are deferred. The local
 `GET /api/alerts` endpoint reads persisted alerts and returns 503 until the
 outbox database is initialized. REST bootstrap seeded EMA 200 from 1,000
 confirmed BTC_USDT 1m candles in a live probe. Next: bounded WebSocket ingestion
-and confirmed candle rollover. Custom and calendar intervals are pending.
+and confirmed candle rollover. The single-symbol probe is available as
+`python -m app.live BTC_USDT <tick-size> --duration 30`. It uses the aggregated
+trade feed and refreshes confirmed closes via REST at rollover. Live WebSocket
+verification, reconnect handling, and custom/calendar intervals are pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
