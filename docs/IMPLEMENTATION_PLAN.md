@@ -47,8 +47,12 @@ An offline regression covers trade-to-ticker and ticker-to-trade transitions,
 including a valid cross after trades resume. A controlled live BTC_USDT probe
 verified trade → sampled ticker → trade by filtering trade frames in a separate
 process. Reproduce with `python -m scripts.probe_failover` from the repository
-root with dependencies installed. Long-running verification and custom/calendar
-intervals are pending.
+root with dependencies installed. The live Docker worker logged seven consecutive
+minute rollovers, SQLite quick check returned ok, and the alert API returned 200.
+A separate live probe resumed trades after an injected disconnect. Two fresh
+containers sharing an isolated volume verified that a fixture alert and cooldown
+survive container replacement. An extended soak and custom/calendar intervals
+remain pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
