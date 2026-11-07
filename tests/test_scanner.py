@@ -41,7 +41,12 @@ def test_duplicate_trade_and_restored_cooldown():
         assert first.observe(tick(122, 102, "a")) is None
         assert first.observe(tick(122, 102, "b")) == "CROSS"
         restarted = build(2)
+        pending = restarted.pending()
+        assert len(pending) == 1
+        assert pending[0][5:8] == ("CROSS", "102", "LIVE_TRADE")
         assert restarted.observe(tick(181, 98, "c")) is None
         assert restarted.observe(tick(182, 102, "d")) is None
+        restarted.acknowledge(pending[0][0])
+        assert build(2).pending() == []
     finally:
         database.close()

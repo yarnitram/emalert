@@ -23,7 +23,9 @@ The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate
 observations and a feed gap. The scanner also tracks the latest 4,096 trade IDs
 in memory and can restore the last alert time from SQLite after restart.
-Before live integration, expand replay coverage and add a durable alert outbox.
+Detection writes the alert outbox row and cooldown checkpoint in one SQLite
+transaction. Pending rows can be recovered and acknowledged. Delivery adapters,
+retry scheduling, and multi-channel delivery tracking are still pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
