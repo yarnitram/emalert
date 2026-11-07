@@ -21,8 +21,9 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 
 The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate
-observations and a feed gap. Before live integration, add exchange trade-ID
-deduplication, broader replay coverage, and persisted alert state.
+observations and a feed gap. The scanner also tracks the latest 4,096 trade IDs
+in memory and can restore the last alert time from SQLite after restart.
+Before live integration, expand replay coverage and add a durable alert outbox.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.

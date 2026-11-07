@@ -1,4 +1,5 @@
-from datetime import timedelta
+from collections import OrderedDict
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from .candles import bucket_start
@@ -19,10 +20,11 @@ class OfflineScanner:
         self.closed_bucket = None
         self.previous: Tick | None = None
         self.distance: Decimal | None = None
-        self.last_alert: Tick | None = None
+        self.last_alert_at: datetime | None = None
+        self.trade_ids: OrderedDict[str, None] = OrderedDict()
         self.armed = False
 
-    def close(self, candle_open, price: Decimal) -> None:
+    def close(self, candle_open: datetime, price: Decimal) -> None:
         bucket = bucket_start(candle_open, self.seconds)
         if bucket != candle_open:
             raise ValueError("unaligned candle")
@@ -51,7 +53,9 @@ class OfflineScanner:
             self.reset_feed()
             return None
         if self.previous is not None:
-            if tick.event_time <= self.previous.event_time:
+            if tick.event_time < self.previous.event_time or (
+                tick.event_time == self.previous.event_time and tick.trade_id is None
+            ):
                 return None
             if tick.feed_tier != self.previous.feed_tier or (
                 tick.event_time - self.previous.event_time > timedelta(seconds=5)
@@ -60,6 +64,12 @@ class OfflineScanner:
         level = self.ema.preview(tick.price)
         if level is None:
             return None
+        if tick.trade_id is not None:
+            if tick.trade_id in self.trade_ids:
+                return None
+            self.trade_ids[tick.trade_id] = None
+            if len(self.trade_ids) > 4096:
+                self.trade_ids.popitem(last=False)
         distance = tick.price - level
         previous_distance = self.distance
         self.previous, self.distance = tick, distance
@@ -68,11 +78,11 @@ class OfflineScanner:
             cross = previous_distance * distance < 0
             if contact or cross:
                 self.armed = False
-                if self.last_alert is None or (
-                    tick.event_time - self.last_alert.event_time >= timedelta(seconds=300)
-                    and bucket != bucket_start(self.last_alert.event_time, self.seconds)
+                if self.last_alert_at is None or (
+                    tick.event_time - self.last_alert_at >= timedelta(seconds=300)
+                    and bucket != bucket_start(self.last_alert_at, self.seconds)
                 ):
-                    self.last_alert = tick
+                    self.last_alert_at = tick.event_time
                     return "TOUCH" if contact else "CROSS"
         if abs(distance) > max(self.band, level * Decimal("0.001")):
             self.armed = True
