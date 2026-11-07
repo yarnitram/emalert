@@ -63,6 +63,13 @@ Offline rollover tests pass for 2h and 12h. They verify that a missing final
 source candle blocks the EMA update and that replaying complete history does
 not apply the same close twice. Docker pytest: 15 passed.
 
+2026-11-08 local check: the running 1m Docker scanner had about 7h 18m of
+uptime, 440 history refreshes (including warmup), no logged feed interruptions
+or container restarts, and HTTP 200 from the alert API. Isolated BTC_USDT
+2h and 12h probes were started ahead of the 08:00 Shanghai boundary. Verify
+post-boundary output with `docker logs emalert-rollover-2h` and
+`docker logs emalert-rollover-12h`. The bounded probes retain logs after exit.
+
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
 - Add dry-run Telegram/Discord adapters and local health/status/contracts/alerts endpoints.
