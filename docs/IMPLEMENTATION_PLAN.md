@@ -53,8 +53,9 @@ A separate live probe resumed trades after an injected disconnect. Two fresh
 containers sharing an isolated volume verified that a fixture alert and cooldown
 survive container replacement. The CLI supports 3m EMA input built from three
 confirmed 1m closes per bucket. A live BTC_USDT probe seeded 666 complete
-buckets and received trades. An extended soak and other custom/calendar
-intervals remain pending.
+buckets and received trades. Live BTC_USDT REST warmup also passed for 10m
+(1,000 buckets), 2h (1,000), and 12h (666). The CLI exposes all four custom
+intervals. An extended soak and calendar intervals remain pending.
 
 - Add REST history adapter, rate limiting, cache, and bounded WebSocket reconnect/subscription handling.
 - Add SQLite repositories and notification outbox.
