@@ -58,7 +58,10 @@ buckets and received trades. Live BTC_USDT REST warmup also passed for 10m
 intervals. Docker now accepts `EMALERT_WATCH` and `EMALERT_TIMEFRAME`.
 An isolated continuous-mode smoke test warmed BTC_USDT and ETH_USDT on 2h
 and received trades for both. This short run did not cross a 2h boundary.
-Live 2h/12h rollover, an extended soak, and calendar intervals remain pending.
+Live 2h/12h rollover passed. Both probes refreshed again at host log time
+23:58:01 UTC, consistent with the separately measured 119-second exchange
+clock lead and the 00:00 UTC candle boundary seen in REST. An extended soak
+and live calendar rollover remain pending.
 Offline rollover tests pass for 2h and 12h. They verify that a missing final
 source candle blocks the EMA update and that replaying complete history does
 not apply the same close twice. Docker pytest: 15 passed.
