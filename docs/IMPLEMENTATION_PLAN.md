@@ -32,6 +32,10 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 Telegram and Discord delivery remain deferred. The 100–300 symbol benchmark
 belongs to the scaling phase.
 
+To review a stopped soak container retained by Docker, run
+`python -m scripts.report_soak emalert-hybrid-soak`. The report reads logs
+and a temporary copy of the SQLite database.
+
 M2 acceptance review found two remaining PRD gaps beyond the deferred
 notification channels: a shared market-wide ticker and a verified initial
 20-symbol profile. The current worker caps the watchlist at five and uses
