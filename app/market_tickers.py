@@ -107,6 +107,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
     with closing(sqlite3.connect(path)) as database:
         sinks = {symbol: CheckpointedScanner(scanner, database) for symbol, scanner in scanners.items()}
         status = FeedStatus(database)
+        raw_status = FeedStatus(database, raw=True)
         loop = asyncio.get_running_loop()
         delay = 1
         async with asyncio.timeout(duration), history_worker(scanners) as request_history:
@@ -145,8 +146,12 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 if ticks:
                                     last_trade[symbol] = now
                             else:
+                                sampled = decode_market_tickers(message, symbols)
+                                raw_status.record_many(
+                                    {sinks[symbol].key: tick.feed_tier for symbol, tick in sampled.items()}, now,
+                                )
                                 ticks = [
-                                    (symbol, tick) for symbol, tick in decode_market_tickers(message, symbols).items()
+                                    (symbol, tick) for symbol, tick in sampled.items()
                                     if now - last_trade.get(symbol, float("-inf")) > 5
                                 ]
                             if not ticks:

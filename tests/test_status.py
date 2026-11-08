@@ -45,6 +45,8 @@ def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):
         assert not path.exists()
         assert client.get("/api/contracts").json() == {"total": 0, "contracts": []}
         with closing(sqlite3.connect(path)) as db:
+            raw = feed_status.FeedStatus(db, raw=True)
+            raw.record(("ETH_USDT", 60, 200), "LIVE_TICKER_SAMPLED", 1)
             status = feed_status.FeedStatus(db)
             key = ("BTC_USDT", 60, 200)
             status.record(key, "LIVE_TRADE_AGGREGATED", 1)

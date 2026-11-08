@@ -3,13 +3,14 @@ from time import time
 
 
 class FeedStatus:
-    def __init__(self, database: sqlite3.Connection):
+    def __init__(self, database: sqlite3.Connection, *, raw: bool = False):
         self.database = database
+        self.table = "raw_ticker_status" if raw else "scanner_status"
         self.next_write: dict[tuple, float] = {}
         self.tiers: dict[tuple, str] = {}
         with database:
             database.execute(
-                "CREATE TABLE IF NOT EXISTS scanner_status (symbol TEXT, seconds INTEGER, "
+                f"CREATE TABLE IF NOT EXISTS {self.table} (symbol TEXT, seconds INTEGER, "
                 "period INTEGER, feed_tier TEXT, observed_at REAL, "
                 "PRIMARY KEY (symbol, seconds, period))"
             )
@@ -27,7 +28,7 @@ class FeedStatus:
         observed_at = time()
         with self.database:
             self.database.executemany(
-                "INSERT OR REPLACE INTO scanner_status VALUES (?, ?, ?, ?, ?)",
+                f"INSERT OR REPLACE INTO {self.table} VALUES (?, ?, ?, ?, ?)",
                 ((*key, tier, observed_at) for key, tier in due.items()),
             )
         for key, tier in due.items():

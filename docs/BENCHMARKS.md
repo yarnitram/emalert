@@ -160,6 +160,12 @@ SQLite integrity passed. Track raw ticker observation time separately
 from scanner heartbeat time to distinguish feed silence from time spent
 waiting for confirmed history.
 
+The raw ticker heartbeat is now stored separately from the scanner heartbeat,
+before history readiness and priority-source filters. It records local arrival
+of a decoded ticker, throttled to one write per profile per five seconds.
+The sampler includes its age for stale scanner profiles. The 30-minute
+`emalert-soak-30-raw-timing` run started at 15:26 Shanghai time.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
