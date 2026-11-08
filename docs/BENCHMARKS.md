@@ -144,6 +144,14 @@ The paced run persisted two alerts and passed SQLite quick check with zero
 container restarts or feed reconnects. Recovery intervals are derived from
 five-second samples and do not establish exact outage durations.
 
+All ten remaining stale samples in the paced run occurred 14–29 seconds
+after the host minute boundary. Eight symbols were affected. ICP_USDT
+appeared in five samples, with the highest heartbeat age at 36.468s.
+Slow refresh logs now split queue wait from fetch/apply time and include
+the exchange timestamp. A 10-minute diagnostics soak started at 15:13
+Shanghai time. As a provisional expansion gate, target at least 99% of
+post-warmup samples with all profiles fresh in a 30-minute repeat.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.

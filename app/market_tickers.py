@@ -44,7 +44,7 @@ def decode_market_tickers(message: dict, symbols: set[str]) -> dict[str, Tick]:
 
 @asynccontextmanager
 async def history_worker(scanners: dict[str, OfflineScanner]):
-    queue: asyncio.Queue[tuple[str, datetime]] = asyncio.Queue(maxsize=len(scanners))
+    queue: asyncio.Queue[tuple[str, datetime, float]] = asyncio.Queue(maxsize=len(scanners))
     pending: set[str] = set()
     retry_at: dict[str, float] = {}
     loop = asyncio.get_running_loop()
@@ -53,22 +53,32 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
 
     def request(symbol: str, as_of: datetime) -> None:
         if symbol not in pending and loop.time() >= retry_at.get(symbol, 0):
-            queue.put_nowait((symbol, as_of))
+            queue.put_nowait((symbol, as_of, loop.time()))
             pending.add(symbol)
 
     async def load() -> None:
         nonlocal next_start
         while True:
-            symbol, as_of = await queue.get()
+            symbol, as_of, queued_at = await queue.get()
             scanner = scanners[symbol]
+            rollover = scanner.ema.value is not None
             try:
                 async with pace_lock:
                     delay = next_start - loop.time()
                     if delay > 0:
                         await asyncio.sleep(delay)
                     next_start = loop.time() + 0.2
+                started_at = loop.time()
                 payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
                 seed_history(scanner, payload, as_of, incremental=True)
+                finished_at = loop.time()
+                if rollover and finished_at - queued_at >= 10:
+                    print(
+                        f"{symbol} slow history refresh: queue={started_at - queued_at:.2f}s "
+                        f"fetch_apply={finished_at - started_at:.2f}s "
+                        f"exchange_time={as_of.isoformat()}",
+                        flush=True,
+                    )
             except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
                 print(f"{symbol} history unavailable: {exc}", flush=True)
                 retry_at[symbol] = loop.time() + 10
