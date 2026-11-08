@@ -25,6 +25,7 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 - [x] Verify shared ticker coverage for 20 symbols and priority trade failover.
 - [x] Verify local liveness, readiness, observed contracts, and alerts endpoints.
 - [x] Run offline Docker tests in GitHub CI.
+- [x] Verify clean shutdown with an isolated live Docker worker. Compose stop produced a clean exit after trade reception.
 - [x] Review the one-hour hybrid run. It exited normally, with zero container restarts, four idle reconnects, all 20 profiles updated within 13 seconds of shutdown, SQLite quick check OK, and five persisted alerts. The run predates the reconnect backoff fix, which has a separate injected-disconnect regression test.
 - [ ] Verify weekly and monthly live candle rollover. Offline coverage and live warmup already pass for both.
 

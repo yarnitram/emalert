@@ -191,5 +191,10 @@ if __name__ == "__main__":
             asyncio.run(scan_market(scanners, path, duration, priority))
         except TimeoutError:
             print("Market probe window ended.")
+        except KeyboardInterrupt:
+            print("Market scanner stopped.")
     else:
-        asyncio.run(watch(symbols, path, duration, seconds, args.ema))
+        try:
+            asyncio.run(watch(symbols, path, duration, seconds, args.ema))
+        except KeyboardInterrupt:
+            print("Trade scanner stopped.")
