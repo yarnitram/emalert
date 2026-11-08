@@ -15,12 +15,21 @@ class FeedStatus:
             )
 
     def record(self, key: tuple, tier: str, monotonic_now: float) -> None:
-        if self.tiers.get(key) == tier and monotonic_now < self.next_write.get(key, 0):
+        self.record_many({key: tier}, monotonic_now)
+
+    def record_many(self, feeds: dict[tuple, str], monotonic_now: float) -> None:
+        due = {
+            key: tier for key, tier in feeds.items()
+            if self.tiers.get(key) != tier or monotonic_now >= self.next_write.get(key, 0)
+        }
+        if not due:
             return
+        observed_at = time()
         with self.database:
-            self.database.execute(
+            self.database.executemany(
                 "INSERT OR REPLACE INTO scanner_status VALUES (?, ?, ?, ?, ?)",
-                (*key, tier, time()),
+                ((*key, tier, observed_at) for key, tier in due.items()),
             )
-        self.next_write[key] = monotonic_now + 5
-        self.tiers[key] = tier
+        for key, tier in due.items():
+            self.next_write[key] = monotonic_now + 5
+            self.tiers[key] = tier

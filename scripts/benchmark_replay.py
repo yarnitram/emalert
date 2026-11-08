@@ -58,8 +58,9 @@ def replay(symbol_count: int, frames: int, market_size: int = 0,
         for symbol, tick in ticks.items():
             if sinks[symbol].observe(tick):
                 alerts += 1
-            if status is not None:
-                status.record((symbol, 60, 200), tick.feed_tier, index * 2)
+        if status is not None:
+            status.record_many({(symbol, 60, 200): tick.feed_tier for symbol, tick in ticks.items()},
+                               index * 2)
         latency.append((perf_counter() - began) * 1000)
     wall = perf_counter() - wall_start
     cpu = process_time() - cpu_start

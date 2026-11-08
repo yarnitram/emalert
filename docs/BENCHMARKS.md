@@ -26,4 +26,18 @@ Initial Windows 20-symbol result: 3,600 observations, 40 expected and
 persisted alerts, 133.473 ms p95 and 172.545 ms p99 per frame. This combines
 the larger frame with per-symbol SQLite commits. At 100 symbols, all 18,000
 observations and 200 persisted alerts matched, with 751.125 ms p95 and
-971.823 ms p99. The 300-symbol result is pending.
+971.823 ms p99. At 300 symbols, all 54,000 observations and 600 alerts matched
+with 2,817.571 ms p95 and 3,369.849 ms p99.
+
+Batching due heartbeat rows into one transaction per frame gave these
+Windows results with the same fixture. All observation and persisted alert
+counts matched.
+
+| Symbols | Batched p95 ms | Batched p99 ms |
+|---:|---:|---:|
+| 20 | 8.735 | 106.217 |
+| 100 | 11.259 | 630.667 |
+| 300 | 25.118 | 1,826.014 |
+
+Alert checkpoints still commit individually. The synchronized alert bursts
+remain a tail-latency concern and warrant a separate measurement and fix.

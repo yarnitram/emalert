@@ -103,6 +103,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 stable_since = last_frame
                             elif last_frame - stable_since >= 60:
                                 delay = 1
+                            frame_status = {}
                             for symbol, tick in ticks:
                                 scanner = scanners[symbol]
                                 bucket = bucket_start(tick.event_time, scanner.seconds)
@@ -122,7 +123,8 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)
                                     reported[symbol] = tick.feed_tier
                                 sinks[symbol].observe(tick)
-                                status.record(sinks[symbol].key, tick.feed_tier, loop.time())
+                                frame_status[sinks[symbol].key] = tick.feed_tier
+                            status.record_many(frame_status, loop.time())
                         raise ConnectionError("Market ticker feed idle")
                 except (OSError, WebSocketException, ValueError) as exc:
                     print(f"Market feed interrupted: {exc}. Retrying in {delay}s.", flush=True)
