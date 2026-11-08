@@ -67,6 +67,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                         last_trade: dict[str, float] = {}
                         ping_at = loop.time()
                         last_frame = ping_at
+                        stable_since = None
                         reported: dict[str, str] = {}
                         for scanner in scanners.values():
                             scanner.reset_feed()
@@ -98,7 +99,10 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                             if not ticks:
                                 continue
                             last_frame = loop.time()
-                            delay = 1
+                            if stable_since is None:
+                                stable_since = last_frame
+                            elif last_frame - stable_since >= 60:
+                                delay = 1
                             for symbol, tick in ticks:
                                 scanner = scanners[symbol]
                                 bucket = bucket_start(tick.event_time, scanner.seconds)
