@@ -15,7 +15,10 @@ def positive(value) -> Decimal | None:
     return number if number.is_finite() and number > 0 else None
 
 
-def build_watchlist(contracts: list[dict], tickers: list[dict], count: int, primary: str) -> str:
+def build_watchlist(contracts: list[dict], tickers: list[dict], count: int, primary: str,
+                    min_turnover: Decimal = Decimal(0)) -> str:
+    if not min_turnover.is_finite() or min_turnover < 0:
+        raise ValueError("Minimum turnover must be finite and nonnegative")
     sizes = {}
     for row in contracts:
         if not isinstance(row, dict):
@@ -35,11 +38,12 @@ def build_watchlist(contracts: list[dict], tickers: list[dict], count: int, prim
             continue
         symbol = row.get("symbol")
         amount = positive(row.get("amount24"))
-        if isinstance(symbol, str) and symbol in sizes and symbol != primary and amount is not None:
+        if (isinstance(symbol, str) and symbol in sizes and symbol != primary
+                and amount is not None and amount >= min_turnover):
             turnover[symbol] = max(amount, turnover.get(symbol, Decimal(0)))
     ranked = sorted(turnover, key=lambda symbol: (-turnover[symbol], symbol))
     if len(ranked) < count - 1:
-        raise ValueError("Insufficient eligible contracts with positive turnover")
+        raise ValueError("Insufficient eligible contracts meeting the turnover floor")
     return ",".join(f"{symbol}:{sizes[symbol]:f}" for symbol in ranked[:count - 1])
 
 
@@ -55,5 +59,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, choices=(20, 30, 50), default=20)
     parser.add_argument("--primary", default="BTC_USDT")
+    parser.add_argument("--min-turnover", type=Decimal, default=Decimal(0),
+                        help="Minimum reported 24h turnover for additional contracts")
     args = parser.parse_args()
-    print(build_watchlist(fetch("detail"), fetch("ticker"), args.count, args.primary))
+    if not args.min_turnover.is_finite() or args.min_turnover < 0:
+        parser.error("--min-turnover must be finite and nonnegative")
+    print(build_watchlist(fetch("detail"), fetch("ticker"), args.count, args.primary, args.min_turnover))

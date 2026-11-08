@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from scripts.build_watchlist import build_watchlist
@@ -21,3 +23,8 @@ def test_watchlist_ranks_turnover_and_filters_ineligible_contracts():
         build_watchlist(contracts, tickers, 4, "BTC_USDT")
     with pytest.raises(ValueError, match="not an eligible"):
         build_watchlist(contracts, tickers, 2, "XRP_USDT")
+    assert build_watchlist(contracts, tickers, 2, "BTC_USDT", Decimal(25)) == "SOL_USDT:0.001"
+    with pytest.raises(ValueError, match="Insufficient"):
+        build_watchlist(contracts, tickers, 3, "BTC_USDT", Decimal(25))
+    with pytest.raises(ValueError, match="nonnegative"):
+        build_watchlist(contracts, tickers, 2, "BTC_USDT", Decimal("NaN"))

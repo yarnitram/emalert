@@ -223,6 +223,9 @@ Generate a fresh ranked `EMALERT_WATCH` for bounded probes with
 49 additional contracts, excluding the separately configured primary.
 Live selection and deterministic ranking were verified. The running soak
 keeps its original watchlist for comparability.
+Use `--min-turnover 1000000` to require a reported 24h turnover floor
+for additional contracts. This example returned 49 eligible additions
+in a live check; it is not a default threshold.
 
 ## 500-symbol offline profile
 
