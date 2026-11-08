@@ -109,6 +109,12 @@ SQLite integrity OK. One retained sample showed 29/30 fresh, with 30/30
 restored on the following 15-second check. Keep the continuous cap at
 20 while measuring per-symbol freshness gaps in a longer 30-symbol run.
 
+The isolated 30-minute run `emalert-soak-30-freshness` began at 11:58
+Shanghai time on November 8. It records full per-symbol freshness samples
+every five seconds to `/tmp/freshness.jsonl` via `scripts/sample_freshness.py`.
+Copy the file from the retained container after exit. Separate warmup
+samples from steady state, then compare missing symbols and stale durations.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
