@@ -91,7 +91,13 @@ async def session(scanner: OfflineScanner, path: Path, duration: int | None) -> 
                             continue
                         if scanner.closed_bucket != previous_bucket(current, scanner.seconds):
                             refreshed = await asyncio.to_thread(bootstrap, scanner, received)
-                            print(f"Refreshed confirmed history ({refreshed} candles)", flush=True)
+                            print(
+                                f"Refreshed confirmed history ({refreshed} candles) "
+                                f"symbol={scanner.symbol} exchange_time={received.isoformat()} "
+                                f"active_bucket={current.isoformat()} "
+                                f"last_closed={scanner.closed_bucket.isoformat()}",
+                                flush=True,
+                            )
                             scanner.reset_feed()
                             break
                         last_observation_at = loop.time()
