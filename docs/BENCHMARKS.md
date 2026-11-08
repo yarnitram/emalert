@@ -212,6 +212,12 @@ turnover, with tick sizes from contract metadata. Collect five-second
 freshness samples and the final soak report before considering a longer run.
 The probe-only flag is rejected in continuous mode.
 
+The 150-second probe finished with all 25 steady-state samples fully fresh,
+50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
+zero history errors, reconnects, or restarts. First full coverage was
+20.45s after the first sample. A matching 30-minute run
+(`emalert-soak-50`) started at 04:46 Shanghai time on November 9.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
