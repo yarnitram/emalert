@@ -189,6 +189,15 @@ samples (allowing for sampling at startup and shutdown), at least 99%
 all-fresh steady-state samples, and zero steady-state sampling DB errors.
 Review the container exit and SQLite integrity separately.
 
+The corrected gate soak scored 342/351 (97.44%), with 30/30 fresh at
+clean exit, five persisted alerts, SQLite integrity OK, and zero reconnects.
+All ten stale symbol readings had fresh raw tickers. For ICP_USDT the
+confirmed-history gate was logged after a REST TLS error. The cause of
+the other stale readings was not established. The worker now permits
+one faster retry after a transient rollover failure while retaining
+global request pacing and the longer retry delay for other failures.
+The 30-minute retry soak started at 21:34 Shanghai time on November 8.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.

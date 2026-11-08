@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager, closing, suppress
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 
 from .candles import bucket_start, previous_bucket
 from .checkpoint import CheckpointedScanner, persist_alerts
@@ -47,6 +48,7 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
     queue: asyncio.Queue[tuple[str, datetime, float]] = asyncio.Queue(maxsize=len(scanners))
     pending: set[str] = set()
     retry_at: dict[str, float] = {}
+    fast_retry_bucket: dict[str, datetime] = {}
     loop = asyncio.get_running_loop()
     pace_lock = asyncio.Lock()
     next_start = 0.0
@@ -71,6 +73,7 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
                 started_at = loop.time()
                 payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
                 seed_history(scanner, payload, as_of, incremental=True)
+                fast_retry_bucket.pop(symbol, None)
                 finished_at = loop.time()
                 if rollover and finished_at - queued_at >= 10:
                     print(
@@ -81,7 +84,15 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
                     )
             except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
                 print(f"{symbol} history unavailable: {exc}", flush=True)
-                retry_at[symbol] = loop.time() + 10
+                bucket = bucket_start(as_of, scanner.seconds)
+                transient = (isinstance(exc, URLError) and not isinstance(exc, HTTPError)
+                             or isinstance(exc, TimeoutError)
+                             or isinstance(exc, HTTPError) and 500 <= exc.code < 600)
+                if rollover and transient and fast_retry_bucket.get(symbol) != bucket:
+                    fast_retry_bucket[symbol] = bucket
+                    retry_at[symbol] = loop.time() + 1
+                else:
+                    retry_at[symbol] = loop.time() + 10
             finally:
                 pending.remove(symbol)
 
