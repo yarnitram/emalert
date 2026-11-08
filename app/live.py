@@ -151,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
     parser.add_argument("--timeframe", choices=TIMEFRAMES, default="1m")
     parser.add_argument("--ema", type=int, choices=(20, 50, 100, 200), default=200)
+    parser.add_argument("--market-tickers", action="store_true", help="Use one sampled feed for up to 20 symbols")
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")
@@ -162,10 +163,21 @@ if __name__ == "__main__":
             symbols[symbol] = Decimal(size)
         except ArithmeticError:
             parser.error("Invalid tick size")
-    if len(symbols) > 5 or args.duration <= 0:
-        parser.error("Use at most five symbols and a positive duration")
+    limit = 20 if args.market_tickers else 5
+    if len(symbols) > limit or args.duration <= 0:
+        parser.error(f"Use at most {limit} symbols and a positive duration")
     if any(not size.is_finite() or size <= 0 for size in symbols.values()):
         parser.error("Tick sizes must be positive finite numbers")
-    asyncio.run(watch(symbols, Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")),
-                      None if args.continuous else args.duration,
-                      TIMEFRAMES[args.timeframe], args.ema))
+    path = Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3"))
+    duration = None if args.continuous else args.duration
+    seconds = TIMEFRAMES[args.timeframe]
+    if args.market_tickers:
+        from .market_tickers import scan_market
+
+        scanners = {symbol: OfflineScanner(symbol, seconds, args.ema, size) for symbol, size in symbols.items()}
+        try:
+            asyncio.run(scan_market(scanners, path, duration))
+        except TimeoutError:
+            print("Market probe window ended.")
+    else:
+        asyncio.run(watch(symbols, path, duration, seconds, args.ema))

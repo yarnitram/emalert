@@ -20,5 +20,7 @@ For a bounded 3-minute EMA 200 probe, run
 The CLI and Docker setting support 1m, 3m, 5m, 10m, 15m, 30m, 1h, 2h, 4h,
 8h, 12h, and 1D. Each custom EMA
 input requires a complete set of confirmed source candles.
+For a single market-wide sampled feed with up to 20 configured symbols, run
+`python -m app.live BTC_USDT 0.1 --watch ETH_USDT:0.01 --market-tickers --duration 30`.
 Weekly and monthly options are `1W` and `1M`. For monthly BTC_USDT, use
 `--ema 20` or `EMALERT_EMA=20` because the available history cannot seed EMA 200.
