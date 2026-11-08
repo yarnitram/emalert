@@ -14,4 +14,15 @@ All observation and alert counts matched the fixture. Latency covers JSON
 decoding through detection. CPU includes frame generation. Peak memory is
 traced Python allocation in a separate pass, not process RSS. The benchmark
 excludes live network latency, queues, SQLite writes, and exchange limits.
-Next, add persistence and a full-size market frame to measure the wider path.
+
+## Full-size frames and SQLite
+
+Run `python -m scripts.benchmark_replay --frames 180 --market-size 1310 --sqlite`.
+The synthetic frames match the observed market frame row count and contain
+minimal ticker fields. The run writes alerts and throttled feed heartbeats to
+a temporary on-disk SQLite database. It checks persisted alert counts.
+
+Initial Windows 20-symbol result: 3,600 observations, 40 expected and
+persisted alerts, 133.473 ms p95 and 172.545 ms p99 per frame. This combines
+the larger frame with per-symbol SQLite commits. The 100- and 300-symbol
+results are pending.
