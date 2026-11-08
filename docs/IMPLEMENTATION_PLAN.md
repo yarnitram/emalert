@@ -112,6 +112,12 @@ remains unverified live. Offline regression tests cover week transitions
 across New Year and month transitions through leap February, including
 exclusion of the open candle and intrabar crossing after warmup.
 
+Replayed actual BTC_USDT REST data across the November 2 weekly boundary
+and November 1 monthly boundary. Weekly EMA 200 advanced from 334 to 335
+confirmed inputs, and monthly EMA 20 advanced from 76 to 77. Refetching
+the same boundary left each EMA unchanged. This verifies historical
+exchange data handling; real-time boundary probes remain separate.
+
 Local status now exposes per-profile heartbeats and feed tiers. Readiness
 requires at least one fresh observation. Docker checks covered empty, fresh,
 and stale readiness states. A separate live Docker test reported fresh
