@@ -131,7 +131,18 @@ boundary and none fell in the final 10s of the minute. This is consistent
 with rollover refresh contention. The history worker now allows three
 requests in flight while retaining at least 200ms between starts.
 A comparable 30-minute soak (`emalert-soak-30-paced`) started at 14:38
-Shanghai time on November 8. Review against the 90.8% serial baseline.
+Shanghai time on November 8 and completed cleanly after 1,800.63s.
+
+| Metric | Serial refresh | Paced overlap |
+|---|---:|---:|
+| All 30 fresh, steady-state samples | 316/348 (90.8%) | 340/350 (97.1%) |
+| Longest sampled first-stale-to-fresh interval | 20.343s | 10.212s |
+| Logged REST history errors | 1 | 0 |
+| Fresh at exit | 30/30 | 30/30 |
+
+The paced run persisted two alerts and passed SQLite quick check with zero
+container restarts or feed reconnects. Recovery intervals are derived from
+five-second samples and do not establish exact outage durations.
 
 ## 500-symbol offline profile
 

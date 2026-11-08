@@ -8,9 +8,29 @@ def summarize(samples: list[dict], expected: int) -> dict:
     first_ready = next((i for i, sample in enumerate(samples) if sample.get("fresh") == expected), None)
     steady = samples[first_ready:] if first_ready is not None else []
     symbols: dict[str, dict] = {}
+    open_gaps: dict[str, float] = {}
     for sample in steady:
+        at = sample["at"]
+        if "database_error" in sample:
+            open_gaps.clear()
+            continue
+        for symbol in open_gaps.keys() - sample.get("stale", {}).keys():
+            started = open_gaps.pop(symbol)
+            if symbol in sample.get("missing", []):
+                continue
+            item = symbols[symbol]
+            item["observed_recoveries"] += 1
+            item["max_first_stale_to_fresh_seconds"] = round(
+                max(item["max_first_stale_to_fresh_seconds"] or 0, at - started), 3,
+            )
         for symbol, age in sample.get("stale", {}).items():
-            item = symbols.setdefault(symbol, {"stale_samples": 0, "peak_heartbeat_age_seconds": 0.0})
+            open_gaps.setdefault(symbol, at)
+            item = symbols.setdefault(symbol, {
+                "stale_samples": 0,
+                "peak_heartbeat_age_seconds": 0.0,
+                "observed_recoveries": 0,
+                "max_first_stale_to_fresh_seconds": None,
+            })
             item["stale_samples"] += 1
             item["peak_heartbeat_age_seconds"] = max(item["peak_heartbeat_age_seconds"], age)
     return {
@@ -23,6 +43,7 @@ def summarize(samples: list[dict], expected: int) -> dict:
         "steady_database_errors": sum("database_error" in sample for sample in steady),
         "steady_missing_symbols": sorted({symbol for sample in steady for symbol in sample.get("missing", [])}),
         "stale_symbols": symbols,
+        "still_stale_at_last_sample": sorted(open_gaps),
     }
 
 
