@@ -3,6 +3,7 @@ import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from decimal import Decimal
+from urllib.error import URLError
 
 import pytest
 
@@ -132,3 +133,39 @@ def test_history_worker_bounds_concurrency_and_paces_starts(monkeypatch):
     asyncio.run(exercise())
     assert peak == 3
     assert all(later - earlier >= 0.19 for earlier, later in zip(starts, starts[1:]))
+
+
+def test_warmed_history_gets_one_fast_retry_after_transient_failure(monkeypatch):
+    at = datetime.fromtimestamp(120, timezone.utc)
+    scanner = OfflineScanner("BTC_USDT", 60, 1, Decimal("0.01"))
+    scanner.close(datetime.fromtimestamp(0, timezone.utc), Decimal(100))
+    attempts = []
+
+    async def exercise():
+        loop = asyncio.get_running_loop()
+        first_failure = asyncio.Event()
+        second_failure = asyncio.Event()
+
+        async def fetch_in_thread(function, requested_scanner, as_of, *, incremental):
+            attempts.append(loop.time())
+            (first_failure if len(attempts) == 1 else second_failure).set()
+            raise URLError("injected TLS failure")
+
+        monkeypatch.setattr("app.market_tickers.asyncio.to_thread", fetch_in_thread)
+        async with asyncio.timeout(4), history_worker({"BTC_USDT": scanner}) as request:
+            request("BTC_USDT", at)
+            await first_failure.wait()
+            request("BTC_USDT", at)
+            await asyncio.sleep(0.1)
+            assert len(attempts) == 1
+            while not second_failure.is_set():
+                request("BTC_USDT", at)
+                await asyncio.sleep(0.05)
+            await asyncio.sleep(1.1)
+            request("BTC_USDT", at)
+            await asyncio.sleep(0.05)
+            assert len(attempts) == 2
+            assert scanner.ema.value == 100
+
+    asyncio.run(exercise())
+    assert attempts[1] - attempts[0] >= 1
