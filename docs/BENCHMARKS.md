@@ -115,6 +115,17 @@ every five seconds to `/tmp/freshness.jsonl` via `scripts/sample_freshness.py`.
 Copy the file from the retained container after exit. Separate warmup
 samples from steady state, then compare missing symbols and stale durations.
 
+The 30-minute run exited normally with 30/30 fresh, two persisted alerts,
+SQLite integrity OK, no feed reconnects, and one REST TLS error for AVAX_USDT.
+After the first full sample, 316/348 samples had all 30 profiles fresh
+(90.8%). Sixteen symbols had at least one stale sample, with AVAX_USDT
+reaching the highest observed heartbeat age at 50.142s. No symbols went
+missing after warmup. These are sampled heartbeat ages, not measured outage
+durations. Summarize the capture with
+`python -m scripts.report_freshness freshness.jsonl --expected 30`.
+Keep continuous coverage at 20 while investigating the relationship between
+rollover refresh scheduling and freshness gaps.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
