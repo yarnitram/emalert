@@ -22,6 +22,7 @@ services:
     environment:
       EMALERT_WATCH: "${EMALERT_WATCH:-}"
       EMALERT_MARKET_TICKERS: "${EMALERT_MARKET_TICKERS:-0}"
+      EMALERT_MARKET_LIMIT: "${EMALERT_MARKET_LIMIT:-20}"
       EMALERT_PRIORITY_TRADES: "${EMALERT_PRIORITY_TRADES:-}"
       EMALERT_DB_PATH: /data/ema_radar.sqlite3
     volumes:

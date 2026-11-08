@@ -162,7 +162,12 @@ if __name__ == "__main__":
                         help="Use one sampled feed for up to 20 symbols")
     parser.add_argument("--probe-30", action="store_true",
                         help="Allow up to 30 symbols in a bounded market ticker probe")
+    parser.add_argument("--market-limit", type=int, choices=(20, 30),
+                        default=os.getenv("EMALERT_MARKET_LIMIT", "20"),
+                        help="Select the supported shared ticker watchlist limit")
     args = parser.parse_args()
+    if args.market_limit not in (20, 30):
+        parser.error("EMALERT_MARKET_LIMIT must be 20 or 30")
     priority = tuple(filter(None, os.getenv("EMALERT_PRIORITY_TRADES", "").split(",")))
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")
@@ -176,7 +181,9 @@ if __name__ == "__main__":
             parser.error("Invalid tick size")
     if args.probe_30 and (not args.market_tickers or args.continuous):
         parser.error("--probe-30 requires bounded market ticker mode")
-    limit = 30 if args.probe_30 else 20 if args.market_tickers else 5
+    if args.market_limit != 20 and not args.market_tickers:
+        parser.error("--market-limit requires market ticker mode")
+    limit = (30 if args.probe_30 else args.market_limit) if args.market_tickers else 5
     if len(symbols) > limit or args.duration <= 0:
         parser.error(f"Use at most {limit} symbols and a positive duration")
     if priority and (not args.market_tickers or len(priority) > 3

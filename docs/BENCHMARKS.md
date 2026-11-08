@@ -198,6 +198,13 @@ one faster retry after a transient rollover failure while retaining
 global request pacing and the longer retry delay for other failures.
 The 30-minute retry soak started at 21:34 Shanghai time on November 8.
 
+The retry soak met the expansion target: 348/350 (99.43%) all-fresh
+steady samples, 30/30 fresh at exit, SQLite integrity OK, and no
+reconnects or REST errors. No alerts fired and the live fast-retry
+path was not exercised during this run; injected-failure coverage
+verifies that path separately. Continuous Docker startup at the opt-in
+30-symbol limit reported 30/30 fresh. The default remains 20.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
