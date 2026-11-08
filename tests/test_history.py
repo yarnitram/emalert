@@ -64,6 +64,22 @@ def test_three_minute_history_requires_all_constituents():
     assert scanner.ema.value == 14
 
 
+def test_incremental_history_advances_only_after_all_missing_candles():
+    start = datetime.fromtimestamp(0, timezone.utc)
+    scanner = OfflineScanner("BTC_USDT", 60, 2, Decimal("0.01"))
+    scanner.close(start, Decimal(100))
+    scanner.close(start + timedelta(seconds=60), Decimal(100))
+    now = start + timedelta(seconds=240)
+    payload = {"success": True, "code": 0, "data": {"time": [180], "close": [106]}}
+    with pytest.raises(ValueError, match="Missing"):
+        seed_history(scanner, payload, now, incremental=True)
+    assert scanner.ema.value == 100
+    payload["data"] = {"time": [120, 180], "close": [100, 106]}
+    assert seed_history(scanner, payload, now, incremental=True) == 2
+    assert scanner.ema.value == 104
+    assert seed_history(scanner, payload, now, incremental=True) == 0
+
+
 @pytest.mark.parametrize("seconds,source", [(7200, 3600), (43200, 14400)])
 def test_custom_rollover_waits_for_complete_history(seconds, source):
     scanner = OfflineScanner("BTC_USDT", seconds, 2, Decimal("0.01"))

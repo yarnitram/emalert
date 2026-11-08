@@ -18,7 +18,8 @@ TIMEFRAMES = {
 }
 
 
-def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int:
+def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime,
+                 *, incremental: bool = False) -> int:
     if payload.get("success") is not True or payload.get("code") != 0:
         raise ValueError("MEXC rejected candle request")
     data = payload["data"]
@@ -47,7 +48,16 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
             and all(at + offset * step in rows for offset in range(1, parts))
         }
     ordered = sorted(rows)
-    if (len(ordered) < scanner.ema.period or ordered[-1] != previous_bucket(current, scanner.seconds)
+    if incremental and scanner.closed_bucket is not None and scanner.ema.value is not None:
+        ordered = [at for at in ordered if at > scanner.closed_bucket]
+        if scanner.closed_bucket == previous_bucket(current, scanner.seconds):
+            return 0
+        if not ordered or previous_bucket(ordered[0], scanner.seconds) != scanner.closed_bucket:
+            raise ValueError("Missing confirmed rollover candles")
+        minimum = 1
+    else:
+        minimum = scanner.ema.period
+    if (len(ordered) < minimum or ordered[-1] != previous_bucket(current, scanner.seconds)
             or any(previous_bucket(b, scanner.seconds) != a for a, b in zip(ordered, ordered[1:]))):
         raise ValueError("Insufficient contiguous closed candles")
     for at in ordered:
@@ -55,7 +65,7 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
     return len(ordered)
 
 
-def fetch_history(scanner: OfflineScanner, as_of: datetime) -> dict:
+def fetch_history(scanner: OfflineScanner, as_of: datetime, *, incremental: bool = False) -> dict:
     if not re.fullmatch(r"[A-Z0-9]+_[A-Z0-9]+", scanner.symbol):
         raise ValueError("Invalid MEXC symbol")
     source_seconds = SOURCE_SECONDS.get(scanner.seconds, scanner.seconds)
@@ -63,6 +73,9 @@ def fetch_history(scanner: OfflineScanner, as_of: datetime) -> dict:
     end = int(bucket_start(as_of, scanner.seconds).timestamp()) - 1
     buckets = min(1000, 2000 // (scanner.seconds // source_seconds))
     start = max(0, end - scanner.seconds * buckets + 1)
+    if incremental and scanner.closed_bucket is not None and scanner.ema.value is not None:
+        next_open = bucket_start(scanner.closed_bucket + timedelta(seconds=scanner.seconds), scanner.seconds)
+        start = max(start, int(next_open.timestamp()))
     url = (
         f"https://api.mexc.com/api/v1/contract/kline/{scanner.symbol}"
         f"?interval={interval}&start={start}&end={end}"

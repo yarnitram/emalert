@@ -67,7 +67,8 @@ def test_history_worker_coalesces_requests_and_seeds_after_fetch(monkeypatch):
         started = asyncio.Event()
         release = asyncio.Event()
 
-        async def fetch_in_thread(function, requested_scanner, as_of):
+        async def fetch_in_thread(function, requested_scanner, as_of, *, incremental):
+            assert incremental
             calls.append((requested_scanner.symbol, as_of))
             started.set()
             await release.wait()

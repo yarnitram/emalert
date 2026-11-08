@@ -85,3 +85,8 @@ A regression test covers request coalescing. In a 30s live check, 19 of 20
 profiles published a fresh heartbeat by exit, with no interruptions and
 SQLite integrity OK. ETC_USDT did not publish in that window. A longer
 coverage run and incremental rollover requests remain open.
+
+The background worker now requests only missing confirmed source candles
+after warmup. A BTC_USDT 1m live REST check seeded 1,000 candles, then fetched
+and applied one missing close. Tests cover gaps and repeated responses.
+A 90s, 20-symbol live verification was started as `emalert-incremental-verify`.

@@ -59,8 +59,8 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
             symbol, as_of = await queue.get()
             scanner = scanners[symbol]
             try:
-                payload = await asyncio.to_thread(fetch_history, scanner, as_of)
-                seed_history(scanner, payload, as_of)
+                payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
+                seed_history(scanner, payload, as_of, incremental=True)
             except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
                 print(f"{symbol} history unavailable: {exc}", flush=True)
                 retry_at[symbol] = loop.time() + 10
