@@ -9,6 +9,7 @@ def summarize(samples: list[dict], expected: int) -> dict:
     steady = samples[first_ready:] if first_ready is not None else []
     symbols: dict[str, dict] = {}
     open_gaps: dict[str, float] = {}
+    raw_comparison = {"raw_fresh": 0, "raw_stale": 0, "raw_unknown": 0}
     for sample in steady:
         at = sample["at"]
         if "database_error" in sample:
@@ -24,6 +25,13 @@ def summarize(samples: list[dict], expected: int) -> dict:
                 max(item["max_first_stale_to_fresh_seconds"] or 0, at - started), 3,
             )
         for symbol, age in sample.get("stale", {}).items():
+            raw_age = sample.get("raw_age_for_stale", {}).get(symbol)
+            if raw_age is None or raw_age < 0:
+                raw_comparison["raw_unknown"] += 1
+            elif raw_age <= 30:
+                raw_comparison["raw_fresh"] += 1
+            else:
+                raw_comparison["raw_stale"] += 1
             open_gaps.setdefault(symbol, at)
             item = symbols.setdefault(symbol, {
                 "stale_samples": 0,
@@ -44,6 +52,7 @@ def summarize(samples: list[dict], expected: int) -> dict:
         "steady_missing_symbols": sorted({symbol for sample in steady for symbol in sample.get("missing", [])}),
         "stale_symbols": symbols,
         "still_stale_at_last_sample": sorted(open_gaps),
+        "raw_ticker_comparison_for_stale_symbol_samples": raw_comparison,
     }
 
 

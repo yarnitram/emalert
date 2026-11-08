@@ -165,6 +165,8 @@ before history readiness and priority-source filters. It records local arrival
 of a decoded ticker, throttled to one write per profile per five seconds.
 The sampler includes its age for stale scanner profiles. The 30-minute
 `emalert-soak-30-raw-timing` run started at 15:26 Shanghai time.
+The freshness report classifies stale scanner samples by whether the
+corresponding raw ticker heartbeat was fresh, stale, or unavailable.
 
 ## 500-symbol offline profile
 
