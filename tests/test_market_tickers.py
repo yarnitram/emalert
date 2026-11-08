@@ -86,3 +86,49 @@ def test_history_worker_coalesces_requests_and_seeds_after_fetch(monkeypatch):
 
     asyncio.run(exercise())
     assert calls == [("BTC_USDT", at)]
+
+
+def test_history_worker_bounds_concurrency_and_paces_starts(monkeypatch):
+    at = datetime.fromtimestamp(120, timezone.utc)
+    scanners = {
+        symbol: OfflineScanner(symbol, 60, 2, Decimal("0.01"))
+        for symbol in ("BTC_USDT", "ETH_USDT", "SOL_USDT", "XRP_USDT")
+    }
+    starts = []
+    active = peak = 0
+
+    async def exercise():
+        loop = asyncio.get_running_loop()
+        release = asyncio.Event()
+        three_started = asyncio.Event()
+        four_started = asyncio.Event()
+
+        async def fetch_in_thread(function, scanner, as_of, *, incremental):
+            nonlocal active, peak
+            starts.append(loop.time())
+            active += 1
+            peak = max(peak, active)
+            if len(starts) == 3:
+                three_started.set()
+            if len(starts) == 4:
+                four_started.set()
+            try:
+                await release.wait()
+                return {"success": True, "code": 0, "data": {"time": [0, 60], "close": [90, 110]}}
+            finally:
+                active -= 1
+
+        monkeypatch.setattr("app.market_tickers.asyncio.to_thread", fetch_in_thread)
+        async with asyncio.timeout(3), history_worker(scanners) as request:
+            for symbol in scanners:
+                request(symbol, at)
+            await three_started.wait()
+            assert active == 3
+            await asyncio.sleep(0.22)
+            assert len(starts) == 3
+            release.set()
+            await four_started.wait()
+
+    asyncio.run(exercise())
+    assert peak == 3
+    assert all(later - earlier >= 0.19 for earlier, later in zip(starts, starts[1:]))
