@@ -51,3 +51,11 @@ reduced p99 for synchronized bursts. The fixture and persisted counts matched.
 A regression test injected a checkpoint failure and verified that the entire
 outbox and checkpoint transaction rolled back before a successful retry.
 These remain offline frame-processing measurements.
+
+Two isolated 20-symbol live runs on the batched build exited cleanly,
+logged no feed interruptions, and passed SQLite quick checks. The longer
+run had 20 fresh profiles at the 20s, 40s, and 60s checkpoints. At container
+exit, only 13 of 20 profiles on the short run and 15 of 20 on the longer run
+met the 30s threshold. Neither run persisted a live alert. Continuous
+freshness through rollover and shutdown needs further investigation before
+expanding live coverage.
