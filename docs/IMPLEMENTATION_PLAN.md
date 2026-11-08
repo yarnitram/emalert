@@ -118,6 +118,23 @@ confirmed inputs, and monthly EMA 20 advanced from 76 to 77. Refetching
 the same boundary left each EMA unchanged. This verifies historical
 exchange data handling; real-time boundary probes remain separate.
 
+### Live monthly verification
+
+Start the isolated probe around 07:50 Shanghai time on December 1, 2026.
+The expected exchange boundary is 00:00 UTC (08:00 Shanghai time).
+Use EMA 20 because the BTC_USDT monthly history is shorter than 200 candles.
+
+```powershell
+docker compose --profile live build scanner
+docker run -d --name emalert-rollover-1m-calendar -e EMALERT_DB_PATH=/tmp/monthly.sqlite3 emalert-scanner python -u -m app.live BTC_USDT 0.1 --timeframe 1M --ema 20 --duration 1200
+docker logs --timestamps emalert-rollover-1m-calendar
+```
+
+Record the initial warmup and the subsequent refresh with
+`active_bucket=2026-12-01T00:00:00+00:00` and
+`last_closed=2026-11-01T00:00:00+00:00`. Check that trades or sampled prices
+continue after the refresh and that the probe exits successfully.
+
 Local status now exposes per-profile heartbeats and feed tiers. Readiness
 requires at least one fresh observation. Docker checks covered empty, fresh,
 and stale readiness states. A separate live Docker test reported fresh
