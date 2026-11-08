@@ -125,6 +125,10 @@ Start the isolated probe around 07:50 Shanghai time on December 1, 2026.
 The expected exchange boundary is 00:00 UTC (08:00 Shanghai time).
 Use EMA 20 because the BTC_USDT monthly history is shorter than 200 candles.
 
+A November 8 Docker rehearsal warmed from 77 confirmed candles, logged
+November 1 as the active bucket and October 1 as the last closed bucket,
+received live BTC_USDT trades, and exited normally.
+
 ```powershell
 docker compose --profile live build scanner
 docker run -d --name emalert-rollover-1m-calendar -e EMALERT_DB_PATH=/tmp/monthly.sqlite3 emalert-scanner python -u -m app.live BTC_USDT 0.1 --timeframe 1M --ema 20 --duration 1200
