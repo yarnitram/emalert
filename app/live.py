@@ -155,6 +155,7 @@ if __name__ == "__main__":
                         default=os.getenv("EMALERT_MARKET_TICKERS") == "1",
                         help="Use one sampled feed for up to 20 symbols")
     args = parser.parse_args()
+    priority = tuple(filter(None, os.getenv("EMALERT_PRIORITY_TRADES", "").split(",")))
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")
     for entry in [*filter(None, configured_watch.split(",")), *args.watch]:
@@ -168,6 +169,9 @@ if __name__ == "__main__":
     limit = 20 if args.market_tickers else 5
     if len(symbols) > limit or args.duration <= 0:
         parser.error(f"Use at most {limit} symbols and a positive duration")
+    if priority and (not args.market_tickers or len(priority) > 3
+                     or len(set(priority)) != len(priority) or not set(priority) <= symbols.keys()):
+        parser.error("Priority trades require market ticker mode and up to three unique watchlist symbols")
     if any(not size.is_finite() or size <= 0 for size in symbols.values()):
         parser.error("Tick sizes must be positive finite numbers")
     path = Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3"))
@@ -178,7 +182,7 @@ if __name__ == "__main__":
 
         scanners = {symbol: OfflineScanner(symbol, seconds, args.ema, size) for symbol, size in symbols.items()}
         try:
-            asyncio.run(scan_market(scanners, path, duration))
+            asyncio.run(scan_market(scanners, path, duration, priority))
         except TimeoutError:
             print("Market probe window ended.")
     else:

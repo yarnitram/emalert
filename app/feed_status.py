@@ -6,6 +6,7 @@ class FeedStatus:
     def __init__(self, database: sqlite3.Connection):
         self.database = database
         self.next_write: dict[tuple, float] = {}
+        self.tiers: dict[tuple, str] = {}
         with database:
             database.execute(
                 "CREATE TABLE IF NOT EXISTS scanner_status (symbol TEXT, seconds INTEGER, "
@@ -14,7 +15,7 @@ class FeedStatus:
             )
 
     def record(self, key: tuple, tier: str, monotonic_now: float) -> None:
-        if monotonic_now < self.next_write.get(key, 0):
+        if self.tiers.get(key) == tier and monotonic_now < self.next_write.get(key, 0):
             return
         with self.database:
             self.database.execute(
@@ -22,3 +23,4 @@ class FeedStatus:
                 (*key, tier, time()),
             )
         self.next_write[key] = monotonic_now + 5
+        self.tiers[key] = tier

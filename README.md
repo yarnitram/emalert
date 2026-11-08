@@ -24,5 +24,7 @@ For a single market-wide sampled feed with up to 20 configured symbols, run
 `python -m app.live BTC_USDT 0.1 --watch ETH_USDT:0.01 --market-tickers --duration 30`.
 For continuous Docker mode, set `EMALERT_MARKET_TICKERS=1` and configure
 `EMALERT_WATCH`. Check every symbol's freshness at `/api/status`.
+Optionally set `EMALERT_PRIORITY_TRADES=BTC_USDT` to prefer trades for up to
+three configured symbols. Separate multiple symbols with commas.
 Weekly and monthly options are `1W` and `1M`. For monthly BTC_USDT, use
 `--ema 20` or `EMALERT_EMA=20` because the available history cannot seed EMA 200.

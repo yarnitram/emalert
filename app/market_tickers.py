@@ -42,9 +42,11 @@ def decode_market_tickers(message: dict, symbols: set[str]) -> dict[str, Tick]:
     return ticks
 
 
-async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration: int | None) -> None:
+async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration: int | None,
+                      priority: tuple[str, ...] = ()) -> None:
     from websockets.asyncio.client import connect
     from websockets.exceptions import WebSocketException
+    from .live import decode_trades
 
     path.parent.mkdir(parents=True, exist_ok=True)
     symbols = set(scanners)
@@ -60,9 +62,12 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                     async with connect("wss://contract.mexc.com/edge", open_timeout=10,
                                        max_queue=4, max_size=4_000_000) as socket:
                         await socket.send('{"method":"sub.tickers","param":{},"gzip":false}')
+                        for symbol in priority:
+                            await socket.send(json.dumps({"method": "sub.deal", "param": {"symbol": symbol}}))
+                        last_trade: dict[str, float] = {}
                         ping_at = loop.time()
                         last_frame = ping_at
-                        reported = set()
+                        reported: dict[str, str] = {}
                         for scanner in scanners.values():
                             scanner.reset_feed()
                         while loop.time() - last_frame < 30:
@@ -73,14 +78,32 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 frame = await asyncio.wait_for(socket.recv(), 3)
                             except TimeoutError:
                                 continue
-                            ticks = decode_market_tickers(json.loads(frame, parse_float=Decimal), symbols)
+                            message = json.loads(frame, parse_float=Decimal)
+                            now = loop.time()
+                            symbol = message.get("symbol")
+                            if (message.get("channel") == "push.deal" and symbol in priority
+                                    and type(message.get("ts")) is int):
+                                received = datetime.fromtimestamp(message["ts"] / 1000, timezone.utc)
+                                ticks = [
+                                    (symbol, tick) for tick in decode_trades(message, symbol, received)
+                                    if 0 <= (received - tick.event_time).total_seconds() <= 5
+                                ]
+                                if ticks:
+                                    last_trade[symbol] = now
+                            else:
+                                ticks = [
+                                    (symbol, tick) for symbol, tick in decode_market_tickers(message, symbols).items()
+                                    if now - last_trade.get(symbol, float("-inf")) > 5
+                                ]
                             if not ticks:
                                 continue
                             last_frame = loop.time()
                             delay = 1
-                            for symbol, tick in ticks.items():
+                            for symbol, tick in ticks:
                                 scanner = scanners[symbol]
                                 bucket = bucket_start(tick.event_time, scanner.seconds)
+                                if bucket != bucket_start(tick.receive_time, scanner.seconds):
+                                    continue
                                 if scanner.closed_bucket != previous_bucket(bucket, scanner.seconds):
                                     if loop.time() < retry_at.get(symbol, 0):
                                         continue
@@ -91,9 +114,9 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                         print(f"{symbol} history unavailable: {exc}", flush=True)
                                     await asyncio.sleep(0.2)
                                     continue
-                                if symbol not in reported:
+                                if reported.get(symbol) != tick.feed_tier:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)
-                                    reported.add(symbol)
+                                    reported[symbol] = tick.feed_tier
                                 sinks[symbol].observe(tick)
                                 status.record(sinks[symbol].key, tick.feed_tier, loop.time())
                         raise ConnectionError("Market ticker feed idle")
