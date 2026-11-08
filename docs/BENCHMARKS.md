@@ -24,5 +24,6 @@ a temporary on-disk SQLite database. It checks persisted alert counts.
 
 Initial Windows 20-symbol result: 3,600 observations, 40 expected and
 persisted alerts, 133.473 ms p95 and 172.545 ms p99 per frame. This combines
-the larger frame with per-symbol SQLite commits. The 100- and 300-symbol
-results are pending.
+the larger frame with per-symbol SQLite commits. At 100 symbols, all 18,000
+observations and 200 persisted alerts matched, with 751.125 ms p95 and
+971.823 ms p99. The 300-symbol result is pending.
