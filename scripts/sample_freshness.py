@@ -15,9 +15,9 @@ def main() -> int:
     parser.add_argument("--symbols", required=True)
     args = parser.parse_args()
     symbols = set(args.symbols.split(","))
-    now = time()
     try:
         with closing(sqlite3.connect(args.database.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)) as db:
+            db.execute("BEGIN")
             rows = dict(db.execute("SELECT symbol, max(observed_at) FROM scanner_status GROUP BY symbol"))
             raw_exists = db.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='raw_ticker_status'"
@@ -25,8 +25,9 @@ def main() -> int:
             raw_rows = (dict(db.execute("SELECT symbol, max(observed_at) FROM raw_ticker_status GROUP BY symbol"))
                         if raw_exists else {})
     except sqlite3.Error as exc:
-        sample = {"at": now, "database_error": str(exc)}
+        sample = {"at": time(), "database_error": str(exc)}
     else:
+        now = time()
         stale = {symbol: round(now - rows[symbol], 3) for symbol in sorted(symbols & rows.keys())
                  if not 0 <= now - rows[symbol] <= 30}
         missing = sorted(symbols - rows.keys())

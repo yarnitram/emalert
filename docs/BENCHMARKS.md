@@ -168,6 +168,16 @@ The sampler includes its age for stale scanner profiles. The 30-minute
 The freshness report classifies stale scanner samples by whether the
 corresponding raw ticker heartbeat was fresh, stale, or unavailable.
 
+The raw-timing run exited normally with 30/30 fresh, one persisted alert,
+SQLite integrity OK, and no logged REST errors or reconnects. The sampler
+initially reported 344/350 all-fresh samples. Eleven symbol readings had
+nonpositive ages because the sample clock was captured before concurrent
+SQLite writes. Excluding those measurement artifacts gives 345/350 (98.6%).
+All five genuine stale symbol readings had fresh raw ticker arrivals and
+recovered by the next sample. The sampler now takes a consistent read
+snapshot and reads the clock afterward. Next, instrument the specific
+scanner gates during these short gaps and repeat with the corrected sampler.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
