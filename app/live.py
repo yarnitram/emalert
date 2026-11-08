@@ -160,6 +160,8 @@ if __name__ == "__main__":
     parser.add_argument("--market-tickers", action="store_true",
                         default=os.getenv("EMALERT_MARKET_TICKERS") == "1",
                         help="Use one sampled feed for up to 20 symbols")
+    parser.add_argument("--probe-30", action="store_true",
+                        help="Allow up to 30 symbols in a bounded market ticker probe")
     args = parser.parse_args()
     priority = tuple(filter(None, os.getenv("EMALERT_PRIORITY_TRADES", "").split(",")))
     symbols = {args.symbol: args.tick_size}
@@ -172,7 +174,9 @@ if __name__ == "__main__":
             symbols[symbol] = Decimal(size)
         except ArithmeticError:
             parser.error("Invalid tick size")
-    limit = 20 if args.market_tickers else 5
+    if args.probe_30 and (not args.market_tickers or args.continuous):
+        parser.error("--probe-30 requires bounded market ticker mode")
+    limit = 30 if args.probe_30 else 20 if args.market_tickers else 5
     if len(symbols) > limit or args.duration <= 0:
         parser.error(f"Use at most {limit} symbols and a positive duration")
     if priority and (not args.market_tickers or len(priority) > 3

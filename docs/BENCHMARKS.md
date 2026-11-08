@@ -94,3 +94,9 @@ The `emalert-incremental-verify` 20-symbol Docker run exited normally after
 restarts or logged feed interruptions and SQLite quick check OK. No alerts
 were recorded in the window. Next is a staged coverage increase on an
 isolated worker, measuring warmup completion and freshness through rollover.
+
+The bounded `--probe-30` hybrid run used 30 active USDT contracts selected
+from live metadata and exchange tick sizes. At the first checkpoint 26
+profiles had reported and 25 were fresh. It exited after 95.97s with 30/30
+fresh, zero restarts or logged feed interruptions, zero alerts, and SQLite
+quick check OK. The continuous default cap remains 20.
