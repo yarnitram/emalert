@@ -89,4 +89,8 @@ coverage run and incremental rollover requests remain open.
 The background worker now requests only missing confirmed source candles
 after warmup. A BTC_USDT 1m live REST check seeded 1,000 candles, then fetched
 and applied one missing close. Tests cover gaps and repeated responses.
-A 90s, 20-symbol live verification was started as `emalert-incremental-verify`.
+The `emalert-incremental-verify` 20-symbol Docker run exited normally after
+90.55 seconds. All 20 profiles were fresh at exit, with zero container
+restarts or logged feed interruptions and SQLite quick check OK. No alerts
+were recorded in the window. Next is a staged coverage increase on an
+isolated worker, measuring warmup completion and freshness through rollover.
