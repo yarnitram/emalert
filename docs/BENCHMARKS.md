@@ -205,6 +205,13 @@ path was not exercised during this run; injected-failure coverage
 verifies that path separately. Continuous Docker startup at the opt-in
 30-symbol limit reported 30/30 fresh. The default remains 20.
 
+The first bounded 50-symbol test (`emalert-probe-50`) started at 22:19
+Shanghai time on November 8 for 150 seconds. It uses priority BTC_USDT
+trades and 49 eligible active USDT perpetuals ranked by reported 24h
+turnover, with tick sizes from contract metadata. Collect five-second
+freshness samples and the final soak report before considering a longer run.
+The probe-only flag is rejected in continuous mode.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
