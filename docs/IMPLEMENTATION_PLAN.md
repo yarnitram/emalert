@@ -19,6 +19,12 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 
 ## M2 — Local live MVP
 
+M2 acceptance review found two remaining PRD gaps beyond the deferred
+notification channels: a shared market-wide ticker and a verified initial
+20-symbol profile. The current worker caps the watchlist at five and uses
+per-symbol ticker fallback. GitHub CI runs Compose validation and offline
+Docker tests on main pushes and pull requests.
+
 The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate
 observations and a feed gap. The scanner also tracks the latest 4,096 trade IDs

@@ -1,0 +1,20 @@
+name: Offline tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose --profile live config --quiet
+      - run: docker build -t emalert-ci .
+      - run: docker run --rm emalert-ci python -m pytest -q -o asyncio_default_fixture_loop_scope=function
