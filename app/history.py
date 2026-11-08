@@ -55,7 +55,7 @@ def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime) -> int
     return len(ordered)
 
 
-def bootstrap(scanner: OfflineScanner, as_of: datetime) -> int:
+def fetch_history(scanner: OfflineScanner, as_of: datetime) -> dict:
     if not re.fullmatch(r"[A-Z0-9]+_[A-Z0-9]+", scanner.symbol):
         raise ValueError("Invalid MEXC symbol")
     source_seconds = SOURCE_SECONDS.get(scanner.seconds, scanner.seconds)
@@ -68,5 +68,8 @@ def bootstrap(scanner: OfflineScanner, as_of: datetime) -> int:
         f"?interval={interval}&start={start}&end={end}"
     )
     with urlopen(url, timeout=10) as response:
-        payload = json.loads(response.read(2_000_000), parse_float=Decimal)
-    return seed_history(scanner, payload, as_of)
+        return json.loads(response.read(2_000_000), parse_float=Decimal)
+
+
+def bootstrap(scanner: OfflineScanner, as_of: datetime) -> int:
+    return seed_history(scanner, fetch_history(scanner, as_of), as_of)

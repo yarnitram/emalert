@@ -2,7 +2,7 @@
 import asyncio
 import json
 import sqlite3
-from contextlib import closing
+from contextlib import asynccontextmanager, closing, suppress
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -10,7 +10,7 @@ from pathlib import Path
 from .candles import bucket_start, previous_bucket
 from .checkpoint import CheckpointedScanner, persist_alerts
 from .feed_status import FeedStatus
-from .history import bootstrap
+from .history import fetch_history, seed_history
 from .models import Tick
 from .scanner import OfflineScanner
 
@@ -42,6 +42,41 @@ def decode_market_tickers(message: dict, symbols: set[str]) -> dict[str, Tick]:
     return ticks
 
 
+@asynccontextmanager
+async def history_worker(scanners: dict[str, OfflineScanner]):
+    queue: asyncio.Queue[tuple[str, datetime]] = asyncio.Queue(maxsize=len(scanners))
+    pending: set[str] = set()
+    retry_at: dict[str, float] = {}
+    loop = asyncio.get_running_loop()
+
+    def request(symbol: str, as_of: datetime) -> None:
+        if symbol not in pending and loop.time() >= retry_at.get(symbol, 0):
+            queue.put_nowait((symbol, as_of))
+            pending.add(symbol)
+
+    async def load() -> None:
+        while True:
+            symbol, as_of = await queue.get()
+            scanner = scanners[symbol]
+            try:
+                payload = await asyncio.to_thread(fetch_history, scanner, as_of)
+                seed_history(scanner, payload, as_of)
+            except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
+                print(f"{symbol} history unavailable: {exc}", flush=True)
+                retry_at[symbol] = loop.time() + 10
+            finally:
+                pending.remove(symbol)
+            await asyncio.sleep(0.2)
+
+    task = asyncio.create_task(load())
+    try:
+        yield request
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
 async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration: int | None,
                       priority: tuple[str, ...] = ()) -> None:
     from websockets.asyncio.client import connect
@@ -54,9 +89,8 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
         sinks = {symbol: CheckpointedScanner(scanner, database) for symbol, scanner in scanners.items()}
         status = FeedStatus(database)
         loop = asyncio.get_running_loop()
-        retry_at: dict[str, float] = {}
         delay = 1
-        async with asyncio.timeout(duration):
+        async with asyncio.timeout(duration), history_worker(scanners) as request_history:
             while True:
                 try:
                     async with connect("wss://contract.mexc.com/edge", open_timeout=10, close_timeout=2,
@@ -111,16 +145,8 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 if bucket != bucket_start(tick.receive_time, scanner.seconds):
                                     continue
                                 if scanner.closed_bucket != previous_bucket(bucket, scanner.seconds):
-                                    if loop.time() < retry_at.get(symbol, 0):
-                                        continue
-                                    retry_at[symbol] = loop.time() + 10
-                                    persist_alerts(database, frame_alerts)
-                                    frame_alerts.clear()
-                                    try:
-                                        await asyncio.to_thread(bootstrap, scanner, tick.event_time)
-                                    except (OSError, ValueError) as exc:
-                                        print(f"{symbol} history unavailable: {exc}", flush=True)
-                                    await asyncio.sleep(0.2)
+                                    if scanner.closed_bucket is None or scanner.closed_bucket < bucket:
+                                        request_history(symbol, tick.event_time)
                                     continue
                                 if reported.get(symbol) != tick.feed_tier:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)

@@ -78,3 +78,10 @@ and 185s at 300. These are planning estimates. The current shared worker
 awaits REST warmup in its frame loop, so keep the live cap at 20 while moving
 history loading off that loop and reducing rollover requests to missing
 confirmed candles.
+
+The shared worker now fetches history in a paced background queue, with
+one pending request per symbol and EMA updates applied on the event loop.
+A regression test covers request coalescing. In a 30s live check, 19 of 20
+profiles published a fresh heartbeat by exit, with no interruptions and
+SQLite integrity OK. ETC_USDT did not publish in that window. A longer
+coverage run and incremental rollover requests remain open.
