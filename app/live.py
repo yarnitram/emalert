@@ -151,7 +151,9 @@ if __name__ == "__main__":
     parser.add_argument("--watch", action="append", default=[], metavar="SYMBOL:TICK_SIZE")
     parser.add_argument("--timeframe", choices=TIMEFRAMES, default="1m")
     parser.add_argument("--ema", type=int, choices=(20, 50, 100, 200), default=200)
-    parser.add_argument("--market-tickers", action="store_true", help="Use one sampled feed for up to 20 symbols")
+    parser.add_argument("--market-tickers", action="store_true",
+                        default=os.getenv("EMALERT_MARKET_TICKERS") == "1",
+                        help="Use one sampled feed for up to 20 symbols")
     args = parser.parse_args()
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")

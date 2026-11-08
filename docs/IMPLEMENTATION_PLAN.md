@@ -28,8 +28,9 @@ Docker tests on main pushes and pull requests.
 Market-wide ticker probe received a 1,310-row plaintext frame and decoded
 20 selected USDT symbols. The opt-in CLI now scans through one shared sampled
 connection. A bounded live run warmed all 20 scanners and accepted sampled
-prices for each. Shared-mode readiness reporting, mixing priority trades with
-the shared ticker, and a continuous 20-symbol verification remain open.
+prices for each. Continuous-mode Docker startup was verified with 20 fresh
+sampled feeds and HTTP 200 readiness. Mixing priority trades with the shared
+ticker and an extended 20-symbol run remain open.
 
 The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate

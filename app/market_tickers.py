@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .candles import bucket_start, previous_bucket
 from .checkpoint import CheckpointedScanner
+from .feed_status import FeedStatus
 from .history import bootstrap
 from .models import Tick
 from .scanner import OfflineScanner
@@ -49,6 +50,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
     symbols = set(scanners)
     with closing(sqlite3.connect(path)) as database:
         sinks = {symbol: CheckpointedScanner(scanner, database) for symbol, scanner in scanners.items()}
+        status = FeedStatus(database)
         loop = asyncio.get_running_loop()
         retry_at: dict[str, float] = {}
         delay = 1
@@ -93,6 +95,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)
                                     reported.add(symbol)
                                 sinks[symbol].observe(tick)
+                                status.record(sinks[symbol].key, tick.feed_tier, loop.time())
                         raise ConnectionError("Market ticker feed idle")
                 except (OSError, WebSocketException, ValueError) as exc:
                     print(f"Market feed interrupted: {exc}. Retrying in {delay}s.", flush=True)
