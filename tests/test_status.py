@@ -1,9 +1,14 @@
 import sqlite3
 from contextlib import closing
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
 from app import feed_status, main
+from app.checkpoint import CheckpointedScanner
+from app.models import Tick
+from app.scanner import OfflineScanner
 
 
 def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):
@@ -30,3 +35,29 @@ def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):
         monkeypatch.setattr(main, "time", lambda: 131)
         assert client.get("/health/ready").status_code == 503
         assert client.get("/api/status").json()["feeds"][0]["fresh"] is False
+
+
+def test_alert_api_reads_a_persisted_intrabar_cross(tmp_path, monkeypatch):
+    path = tmp_path / "alerts.sqlite3"
+    monkeypatch.setenv("EMALERT_DB_PATH", str(path))
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    scanner = OfflineScanner("BTC_USDT", 60, 2, Decimal("0.01"))
+    scanner.close(start, Decimal(100))
+    scanner.close(start + timedelta(minutes=1), Decimal(100))
+
+    with closing(sqlite3.connect(path)) as db:
+        sink = CheckpointedScanner(scanner, db)
+        first = start + timedelta(seconds=121)
+        second = first + timedelta(seconds=1)
+        assert sink.observe(Tick("BTC_USDT", Decimal(98), first, first)) is None
+        assert sink.observe(Tick("BTC_USDT", Decimal(102), second, second)) == "CROSS"
+
+    with TestClient(main.app) as client:
+        response = client.get("/api/alerts", params={"limit": 1})
+        assert response.status_code == 200
+        alert, = response.json()["alerts"]
+        assert alert["symbol"] == "BTC_USDT"
+        assert alert["kind"] == "CROSS"
+        assert alert["alert_at"] == second.isoformat()
+        assert alert["price"] == "102"
+        assert alert["delivered"] == 0
