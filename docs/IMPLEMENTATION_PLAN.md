@@ -31,8 +31,10 @@ connection. A bounded live run warmed all 20 scanners and accepted sampled
 prices for each. Continuous-mode Docker startup was verified with 20 fresh
 sampled feeds and HTTP 200 readiness. Hybrid mode now supports up to three
 priority trade subscriptions on the same connection. A live probe observed
-BTC_USDT trades and ETH_USDT sampled prices concurrently. Hybrid failover
-verification and an extended 20-symbol run remain open.
+BTC_USDT trades and ETH_USDT sampled prices concurrently. The controlled
+`python -m scripts.probe_failover --hybrid` run verified BTC_USDT trade →
+sampled ticker → trade, while ETH_USDT stayed sampled. An isolated one-hour,
+20-symbol hybrid Docker run was started as `emalert-hybrid-soak`; results pending.
 
 The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate
