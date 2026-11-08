@@ -178,6 +178,12 @@ recovered by the next sample. The sampler now takes a consistent read
 snapshot and reads the clock afterward. Next, instrument the specific
 scanner gates during these short gaps and repeat with the corrected sampler.
 
+Gate diagnostics now log when observations continue but an already-warmed
+symbol has gone at least 25s without processing. They distinguish prior-bucket
+trades from missing confirmed history and include the target and last closed
+buckets. A 30-minute repeat using the corrected sampler started as
+`emalert-soak-30-gates` at 17:20 Shanghai time.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.

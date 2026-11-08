@@ -110,6 +110,21 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
         raw_status = FeedStatus(database, raw=True)
         loop = asyncio.get_running_loop()
         delay = 1
+        last_processed: dict[str, float] = {}
+        last_gate_log: dict[str, float] = {}
+
+        def report_gate(symbol: str, gate: str, bucket: datetime) -> None:
+            now = loop.time()
+            previous = last_processed.get(symbol)
+            if previous is None or now - previous < 25 or now - last_gate_log.get(symbol, -100) < 5:
+                return
+            print(
+                f"{symbol} scanner gate={gate} idle={now - previous:.2f}s "
+                f"bucket={bucket.isoformat()} last_closed={scanners[symbol].closed_bucket}",
+                flush=True,
+            )
+            last_gate_log[symbol] = now
+
         async with asyncio.timeout(duration), history_worker(scanners) as request_history:
             while True:
                 try:
@@ -167,8 +182,10 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 scanner = scanners[symbol]
                                 bucket = bucket_start(tick.event_time, scanner.seconds)
                                 if bucket != bucket_start(tick.receive_time, scanner.seconds):
+                                    report_gate(symbol, "prior_bucket_trade", bucket)
                                     continue
                                 if scanner.closed_bucket != previous_bucket(bucket, scanner.seconds):
+                                    report_gate(symbol, "confirmed_history", bucket)
                                     if scanner.closed_bucket is None or scanner.closed_bucket < bucket:
                                         request_history(symbol, tick.event_time)
                                     continue
@@ -179,6 +196,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 if alert is not None:
                                     frame_alerts.append(alert)
                                 frame_status[sinks[symbol].key] = tick.feed_tier
+                                last_processed[symbol] = loop.time()
                             persist_alerts(database, frame_alerts)
                             status.record_many(frame_status, loop.time())
                         raise ConnectionError("Market ticker feed idle")
