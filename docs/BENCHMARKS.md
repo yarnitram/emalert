@@ -100,3 +100,6 @@ from live metadata and exchange tick sizes. At the first checkpoint 26
 profiles had reported and 25 were fresh. It exited after 95.97s with 30/30
 fresh, zero restarts or logged feed interruptions, zero alerts, and SQLite
 quick check OK. The continuous default cap remains 20.
+
+The 10-minute probe uses Docker freshness checks. The final soak report
+includes history errors and the recent health-check entries Docker retains.

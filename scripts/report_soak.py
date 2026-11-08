@@ -22,6 +22,8 @@ def report(container: str, database: str) -> dict:
     finished = datetime.fromisoformat(state["FinishedAt"]).timestamp()
     started = datetime.fromisoformat(state["StartedAt"]).timestamp()
     logs = docker("logs", container)
+    lines = logs.splitlines()
+    health_checks = state.get("Health", {}).get("Log", [])
     with TemporaryDirectory() as directory:
         copy = Path(directory) / "soak.sqlite3"
         docker("cp", f"{container}:{database}", str(copy))
@@ -36,7 +38,12 @@ def report(container: str, database: str) -> dict:
         "duration_seconds": round(finished - started, 2),
         "exit_code": state["ExitCode"],
         "container_restarts": details["RestartCount"],
-        "logged_interruptions": sum("feed interrupted" in line.lower() for line in logs.splitlines()),
+        "logged_interruptions": sum("feed interrupted" in line.lower() for line in lines),
+        "logged_history_errors": sum("history unavailable" in line.lower() for line in lines),
+        "recent_docker_health_checks": [
+            {"at": check["End"], "exit_code": check["ExitCode"], "output": check["Output"].strip()}
+            for check in health_checks
+        ],
         "profiles": profiles,
         "fresh_at_exit": fresh,
         "persisted_alerts": alerts,
