@@ -103,6 +103,11 @@ quick check OK. The continuous default cap remains 20.
 
 The 10-minute probe uses Docker freshness checks. The final soak report
 includes history errors and the recent health-check entries Docker retains.
+The run exited normally after 600.60s with 30/30 fresh at exit, zero
+restarts, no logged feed or history errors, one persisted alert, and
+SQLite integrity OK. One retained sample showed 29/30 fresh, with 30/30
+restored on the following 15-second check. Keep the continuous cap at
+20 while measuring per-symbol freshness gaps in a longer 30-symbol run.
 
 ## 500-symbol offline profile
 
