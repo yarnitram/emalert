@@ -6,7 +6,7 @@ Status: Partial — REST contract discovery, BTC_USDT candle history, and one fu
 |---|---|---|---|
 | REST | `https://api.mexc.com` is the current futures REST base | `/api/v1/contract/detail` returned JSON object successfully | VERIFIED (basic access only) |
 | Futures WebSocket | `wss://contract.mexc.com/edge` | Connected and received trade data | VERIFIED for one symbol |
-| Global tickers | `sub.tickers` provides broad updates about every 2 seconds | Not tested | NOT VERIFIED |
+| Global tickers | `sub.tickers` provides broad sampled updates | Plaintext BTC-session probe received a 1,310-row frame with millisecond envelope timestamp and decoded 20 selected USDT symbols | VERIFIED for receipt and decoding |
 | Trades | `sub.deal` accepts one symbol and emits trades | BTC_USDT subscription acknowledged and trade batches received with millisecond timestamps | VERIFIED for one symbol |
 | Candles | REST kline endpoint supports historical candles | Loaded 1,000 closed BTC_USDT 1m candles at startup and refreshed at rollover | VERIFIED for this profile |
 | Futures limits | Must be measured; spot 30-stream limit is not applicable evidence | Not tested | NOT VERIFIED |

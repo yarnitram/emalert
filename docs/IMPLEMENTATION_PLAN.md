@@ -25,6 +25,10 @@ notification channels: a shared market-wide ticker and a verified initial
 per-symbol ticker fallback. GitHub CI runs Compose validation and offline
 Docker tests on main pushes and pull requests.
 
+Market-wide ticker probe received a 1,310-row plaintext frame and decoded
+20 selected USDT symbols. Wiring the shared feed into live scanning and
+verifying a continuous 20-symbol profile remain open.
+
 The fixed-interval offline scanner now consumes confirmed candle closes and
 detects intrabar contacts and crosses. A deterministic fixture covers duplicate
 observations and a feed gap. The scanner also tracks the latest 4,096 trade IDs
