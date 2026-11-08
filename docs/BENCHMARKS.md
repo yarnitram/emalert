@@ -152,6 +152,14 @@ the exchange timestamp. A 10-minute diagnostics soak started at 15:13
 Shanghai time. As a provisional expansion gate, target at least 99% of
 post-warmup samples with all profiles fresh in a 30-minute repeat.
 
+The 10-minute diagnostics soak finished with 110/114 (96.5%) all-fresh
+steady samples. ADA_USDT and RENDER_USDT each accounted for two stale
+samples. No refresh exceeded the 10s logging threshold, and no history
+errors or reconnects were logged. All 30 were fresh at clean exit and
+SQLite integrity passed. Track raw ticker observation time separately
+from scanner heartbeat time to distinguish feed silence from time spent
+waiting for confirmed history.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
