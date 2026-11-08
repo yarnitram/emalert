@@ -19,6 +19,18 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 
 ## M2 — Local live MVP
 
+### Closeout checklist
+
+- [x] Verify live REST warmup, Docker startup, and persisted alert history.
+- [x] Verify shared ticker coverage for 20 symbols and priority trade failover.
+- [x] Verify local liveness, readiness, observed contracts, and alerts endpoints.
+- [x] Run offline Docker tests in GitHub CI.
+- [ ] Review the one-hour hybrid run for exit status, feed coverage near shutdown, logged interruptions, and SQLite integrity.
+- [ ] Verify weekly and monthly live candle rollover. Offline coverage and live warmup already pass for both.
+
+Telegram and Discord delivery remain deferred. The 100–300 symbol benchmark
+belongs to the scaling phase.
+
 M2 acceptance review found two remaining PRD gaps beyond the deferred
 notification channels: a shared market-wide ticker and a verified initial
 20-symbol profile. The current worker caps the watchlist at five and uses
