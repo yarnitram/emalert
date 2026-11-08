@@ -21,6 +21,7 @@ def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):
         assert client.get("/health/live").status_code == 200
         assert client.get("/health/ready").status_code == 503
         assert not path.exists()
+        assert client.get("/api/contracts").json() == {"total": 0, "contracts": []}
         with closing(sqlite3.connect(path)) as db:
             status = feed_status.FeedStatus(db)
             key = ("BTC_USDT", 60, 200)
@@ -31,10 +32,16 @@ def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):
         assert len(feeds) == 1
         assert feeds[0]["feed_tier"] == "LIVE_TICKER_SAMPLED"
         assert feeds[0]["fresh"] is True
+        contracts = client.get("/api/contracts", params={"limit": 1}).json()
+        assert contracts == {"total": 1, "contracts": [
+            {"symbol": "BTC_USDT", "fresh": True, "feeds": feeds},
+        ]}
+        assert client.get("/api/contracts", params={"offset": 1}).json()["contracts"] == []
 
         monkeypatch.setattr(main, "time", lambda: 131)
         assert client.get("/health/ready").status_code == 503
         assert client.get("/api/status").json()["feeds"][0]["fresh"] is False
+        assert client.get("/api/contracts").json()["contracts"][0]["fresh"] is False
 
 
 def test_alert_api_reads_a_persisted_intrabar_cross(tmp_path, monkeypatch):

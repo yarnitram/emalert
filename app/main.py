@@ -39,6 +39,21 @@ def ready() -> dict:
     return {"status": "ready"}
 
 
+@app.get("/api/contracts")
+def contracts(
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    grouped: dict[str, list[dict]] = {}
+    for feed in status()["feeds"]:
+        grouped.setdefault(feed["symbol"], []).append(feed)
+    entries = [
+        {"symbol": symbol, "fresh": any(feed["fresh"] for feed in feeds), "feeds": feeds}
+        for symbol, feeds in sorted(grouped.items())
+    ]
+    return {"total": len(entries), "contracts": entries[offset:offset + limit]}
+
+
 @app.get("/api/alerts")
 def alerts(limit: int = Query(100, ge=1, le=1000)) -> dict:
     path = Path(os.getenv("EMALERT_DB_PATH", "data/ema_radar.sqlite3")).resolve()

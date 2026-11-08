@@ -12,6 +12,8 @@ alert history at `http://127.0.0.1:8000/api/alerts`. Both services share a
 persistent SQLite volume. The CLI also accepts up to five symbols for a watchlist.
 Use `/api/status` for feed freshness and `/health/ready` to check whether
 at least one scanner has observed data in the last 30 seconds.
+`/api/contracts?limit=20&offset=0` groups observed feeds by symbol with
+pagination. It reports scanner coverage rather than the exchange listing.
 For continuous Docker scanning, set `EMALERT_WATCH=ETH_USDT:0.01` to add
 symbols (comma-separated, up to five total), and set `EMALERT_TIMEFRAME` to
 select one interval for the watchlist. Verify the tick sizes for your contracts.
