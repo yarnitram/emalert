@@ -65,3 +65,16 @@ processing deadline. All 20 were fresh at both deadlines. Container exit
 followed 10.47s and 10.62s later, enough to age some past the 30s threshold.
 With a two-second WebSocket close timeout, a repeat of the 35s probe exited
 after 35.55s with 20/20 fresh, no interruptions, and SQLite quick check OK.
+
+## REST warmup budget
+
+The existing 20-symbol BTC-first profile completed 20 live serial 1m history
+requests and seeded EMA 200 for all symbols. Median request plus decode/seed
+was 0.402s, slowest was 0.510s, and total wall time was 12.350s with a 200ms
+pause after each request. This is one run from the Windows host.
+
+Linear extrapolation at that observed pace gives about 62s at 100 symbols
+and 185s at 300. These are planning estimates. The current shared worker
+awaits REST warmup in its frame loop, so keep the live cap at 20 while moving
+history loading off that loop and reducing rollover requests to missing
+confirmed candles.
