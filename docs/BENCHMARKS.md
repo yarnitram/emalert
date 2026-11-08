@@ -183,6 +183,11 @@ symbol has gone at least 25s without processing. They distinguish prior-bucket
 trades from missing confirmed history and include the target and last closed
 buckets. A 30-minute repeat using the corrected sampler started as
 `emalert-soak-30-gates` at 17:20 Shanghai time.
+Use `python -m scripts.report_freshness freshness.jsonl --expected 30 --expansion-gate`
+to check the provisional target. It requires at least 1,785s of captured
+samples (allowing for sampling at startup and shutdown), at least 99%
+all-fresh steady-state samples, and zero steady-state sampling DB errors.
+Review the container exit and SQLite integrity separately.
 
 ## 500-symbol offline profile
 

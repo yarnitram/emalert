@@ -48,6 +48,7 @@ def summarize(samples: list[dict], expected: int) -> dict:
         ),
         "steady_samples": len(steady),
         "steady_full_samples": sum(sample.get("fresh") == expected for sample in steady),
+        "capture_seconds": round(samples[-1]["at"] - samples[0]["at"], 2) if samples else 0,
         "steady_database_errors": sum("database_error" in sample for sample in steady),
         "steady_missing_symbols": sorted({symbol for sample in steady for symbol in sample.get("missing", [])}),
         "stale_symbols": symbols,
@@ -56,10 +57,27 @@ def summarize(samples: list[dict], expected: int) -> dict:
     }
 
 
+def expansion_gate(result: dict) -> dict:
+    steady = result["steady_samples"]
+    fraction = result["steady_full_samples"] / steady if steady else 0
+    # Five-second sampling can miss the first and last few seconds of a 30-minute probe.
+    duration_met = result["capture_seconds"] >= 1785
+    return {
+        "all_fresh_percent": round(100 * fraction, 2),
+        "duration_met": duration_met,
+        "passed": duration_met and fraction >= 0.99 and not result["steady_database_errors"],
+    }
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("samples", type=argparse.FileType("r"))
     parser.add_argument("--expected", type=int, required=True)
+    parser.add_argument("--expansion-gate", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(summarize([json.loads(line) for line in args.samples if line.strip()], args.expected),
-                     indent=2))
+    result = summarize([json.loads(line) for line in args.samples if line.strip()], args.expected)
+    if args.expansion_gate:
+        result["expansion_gate"] = expansion_gate(result)
+    print(json.dumps(result, indent=2))
+    if args.expansion_gate and not result["expansion_gate"]["passed"]:
+        raise SystemExit(1)
