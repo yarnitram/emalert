@@ -103,3 +103,12 @@ quick check OK. The continuous default cap remains 20.
 
 The 10-minute probe uses Docker freshness checks. The final soak report
 includes history errors and the recent health-check entries Docker retains.
+
+## 500-symbol offline profile
+
+Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
+The Windows replay processed all 90,000 expected observations and persisted
+all 1,000 expected alerts. Frame latency was 7.063ms p50, 21.210ms p95, and
+53.146ms p99. CPU time was 1.656s and peak traced Python allocation was
+1.755 MiB. This profile uses synthetic frames and does not establish live
+capacity or exchange limits.

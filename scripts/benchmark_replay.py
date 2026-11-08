@@ -103,10 +103,13 @@ if __name__ == "__main__":
     parser.add_argument("--frames", type=int, default=300)
     parser.add_argument("--market-size", type=int, default=0)
     parser.add_argument("--sqlite", action="store_true")
+    parser.add_argument("--symbols", type=int, nargs="+", default=[20, 100, 300])
     args = parser.parse_args()
     if args.frames < 2:
         parser.error("--frames must be at least 2")
-    for count in (20, 100, 300):
+    if any(count < 1 for count in args.symbols):
+        parser.error("--symbols requires positive counts")
+    for count in args.symbols:
         result = run_profile(count, args.frames, args.market_size, args.sqlite)
         tracemalloc.start()
         try:
