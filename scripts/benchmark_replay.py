@@ -12,7 +12,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter, process_time
 
-from app.checkpoint import CheckpointedScanner
+from app.checkpoint import CheckpointedScanner, persist_alerts
 from app.feed_status import FeedStatus
 from app.market_tickers import decode_market_tickers
 from app.scanner import OfflineScanner
@@ -31,7 +31,7 @@ def replay(symbol_count: int, frames: int, market_size: int = 0,
         for i in range(max(0, market_size - symbol_count))
     ]
     sinks = {symbol: CheckpointedScanner(scanner, database)
-             for symbol, scanner in scanners.items()} if database is not None else scanners
+             for symbol, scanner in scanners.items()} if database is not None else {}
     status = FeedStatus(database) if database is not None else None
     for scanner in scanners.values():
         for minute in range(200):
@@ -55,10 +55,15 @@ def replay(symbol_count: int, frames: int, market_size: int = 0,
         began = perf_counter()
         ticks = decode_market_tickers(json.loads(frame), symbols)
         observed += len(ticks)
-        for symbol, tick in ticks.items():
-            if sinks[symbol].observe(tick):
-                alerts += 1
-        if status is not None:
+        if database is None:
+            alerts += sum(scanners[symbol].observe(tick) is not None for symbol, tick in ticks.items())
+        else:
+            frame_alerts = [
+                alert for symbol, tick in ticks.items()
+                if (alert := sinks[symbol].detect(tick)) is not None
+            ]
+            persist_alerts(database, frame_alerts)
+            alerts += len(frame_alerts)
             status.record_many({(symbol, 60, 200): tick.feed_tier for symbol, tick in ticks.items()},
                                index * 2)
         latency.append((perf_counter() - began) * 1000)

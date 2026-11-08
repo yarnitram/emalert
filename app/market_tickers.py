@@ -8,7 +8,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from .candles import bucket_start, previous_bucket
-from .checkpoint import CheckpointedScanner
+from .checkpoint import CheckpointedScanner, persist_alerts
 from .feed_status import FeedStatus
 from .history import bootstrap
 from .models import Tick
@@ -104,6 +104,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                             elif last_frame - stable_since >= 60:
                                 delay = 1
                             frame_status = {}
+                            frame_alerts = []
                             for symbol, tick in ticks:
                                 scanner = scanners[symbol]
                                 bucket = bucket_start(tick.event_time, scanner.seconds)
@@ -113,6 +114,8 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                     if loop.time() < retry_at.get(symbol, 0):
                                         continue
                                     retry_at[symbol] = loop.time() + 10
+                                    persist_alerts(database, frame_alerts)
+                                    frame_alerts.clear()
                                     try:
                                         await asyncio.to_thread(bootstrap, scanner, tick.event_time)
                                     except (OSError, ValueError) as exc:
@@ -122,8 +125,11 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 if reported.get(symbol) != tick.feed_tier:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)
                                     reported[symbol] = tick.feed_tier
-                                sinks[symbol].observe(tick)
+                                alert = sinks[symbol].detect(tick)
+                                if alert is not None:
+                                    frame_alerts.append(alert)
                                 frame_status[sinks[symbol].key] = tick.feed_tier
+                            persist_alerts(database, frame_alerts)
                             status.record_many(frame_status, loop.time())
                         raise ConnectionError("Market ticker feed idle")
                 except (OSError, WebSocketException, ValueError) as exc:

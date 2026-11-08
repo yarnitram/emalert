@@ -39,5 +39,15 @@ counts matched.
 | 100 | 11.259 | 630.667 |
 | 300 | 25.118 | 1,826.014 |
 
-Alert checkpoints still commit individually. The synchronized alert bursts
-remain a tail-latency concern and warrant a separate measurement and fix.
+Batching alert outbox rows and their checkpoints in the same transaction
+reduced p99 for synchronized bursts. The fixture and persisted counts matched.
+
+| Symbols | Alert-batched p95 ms | Alert-batched p99 ms | Persisted alerts |
+|---:|---:|---:|---:|
+| 20 | 6.428 | 7.940 | 40 |
+| 100 | 7.665 | 8.489 | 200 |
+| 300 | 12.555 | 14.836 | 600 |
+
+A regression test injected a checkpoint failure and verified that the entire
+outbox and checkpoint transaction rolled back before a successful retry.
+These remain offline frame-processing measurements.

@@ -1,4 +1,5 @@
 import sqlite3
+import pytest
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -6,9 +7,30 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 
 from app import feed_status, main
-from app.checkpoint import CheckpointedScanner
+from app.checkpoint import CheckpointedScanner, persist_alerts
 from app.models import Tick
 from app.scanner import OfflineScanner
+
+
+def test_alert_batch_rolls_back_when_checkpoint_fails():
+    with closing(sqlite3.connect(":memory:")) as db:
+        CheckpointedScanner(OfflineScanner("BTC_USDT", 60, 2, Decimal("0.01")), db)
+        db.execute(
+            "CREATE TRIGGER reject_checkpoint BEFORE INSERT ON alert_checkpoint "
+            "WHEN NEW.symbol = 'ETH_USDT' BEGIN SELECT RAISE(ABORT, 'injected failure'); END"
+        )
+        rows = [
+            (symbol, 60, 2, "2026-01-01T00:00:00+00:00", "CROSS", "102", "LIVE_TICKER_SAMPLED")
+            for symbol in ("BTC_USDT", "ETH_USDT")
+        ]
+        with pytest.raises(sqlite3.IntegrityError):
+            persist_alerts(db, rows)
+        assert db.execute("SELECT count(*) FROM alert_outbox").fetchone() == (0,)
+        assert db.execute("SELECT count(*) FROM alert_checkpoint").fetchone() == (0,)
+        db.execute("DROP TRIGGER reject_checkpoint")
+        persist_alerts(db, rows)
+        assert db.execute("SELECT count(*) FROM alert_outbox").fetchone() == (2,)
+        assert db.execute("SELECT count(*) FROM alert_checkpoint").fetchone() == (2,)
 
 
 def test_readiness_expires_and_feed_switch_is_published(tmp_path, monkeypatch):

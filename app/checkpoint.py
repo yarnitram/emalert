@@ -5,6 +5,24 @@ from .models import Tick
 from .scanner import OfflineScanner
 
 
+def persist_alerts(database: sqlite3.Connection, alerts: list[tuple]) -> None:
+    if not alerts:
+        return
+    with database:
+        database.executemany(
+            "INSERT INTO alert_outbox "
+            "(symbol, seconds, period, alert_at, kind, price, feed_tier) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(symbol, seconds, period, alert_at) DO NOTHING",
+            alerts,
+        )
+        database.executemany(
+            "INSERT INTO alert_checkpoint VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(symbol, seconds, period) DO UPDATE SET alert_at=excluded.alert_at",
+            (row[:4] for row in alerts),
+        )
+
+
 class CheckpointedScanner:
     """Persist emitted-alert timing per scanner; warm candle history separately."""
 
@@ -33,23 +51,18 @@ class CheckpointedScanner:
         if row:
             scanner.last_alert_at = datetime.fromisoformat(row[0])
 
-    def observe(self, tick: Tick) -> str | None:
+    def detect(self, tick: Tick) -> tuple | None:
         result = self.scanner.observe(tick)
-        if result is not None:
-            with self.database:
-                self.database.execute(
-                    "INSERT INTO alert_outbox "
-                    "(symbol, seconds, period, alert_at, kind, price, feed_tier) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?) "
-                    "ON CONFLICT(symbol, seconds, period, alert_at) DO NOTHING",
-                    (*self.key, tick.event_time.isoformat(), result, str(tick.price), tick.feed_tier),
-                )
-                self.database.execute(
-                    "INSERT INTO alert_checkpoint VALUES (?, ?, ?, ?) "
-                    "ON CONFLICT(symbol, seconds, period) DO UPDATE SET alert_at=excluded.alert_at",
-                    (*self.key, tick.event_time.isoformat()),
-                )
-        return result
+        if result is None:
+            return None
+        return (*self.key, tick.event_time.isoformat(), result, str(tick.price), tick.feed_tier)
+
+    def observe(self, tick: Tick) -> str | None:
+        alert = self.detect(tick)
+        if alert is None:
+            return None
+        persist_alerts(self.database, [alert])
+        return alert[4]
 
     def pending(self, limit: int = 100) -> list[tuple]:
         if not 1 <= limit <= 1000:
