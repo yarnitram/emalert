@@ -126,6 +126,13 @@ durations. Summarize the capture with
 Keep continuous coverage at 20 while investigating the relationship between
 rollover refresh scheduling and freshness gaps.
 
+Of 32 stale steady-state samples, 27 fell 10–29s after the host minute
+boundary and none fell in the final 10s of the minute. This is consistent
+with rollover refresh contention. The history worker now allows three
+requests in flight while retaining at least 200ms between starts.
+A comparable 30-minute soak (`emalert-soak-30-paced`) started at 14:38
+Shanghai time on November 8. Review against the 90.8% serial baseline.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.

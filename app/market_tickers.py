@@ -48,6 +48,8 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
     pending: set[str] = set()
     retry_at: dict[str, float] = {}
     loop = asyncio.get_running_loop()
+    pace_lock = asyncio.Lock()
+    next_start = 0.0
 
     def request(symbol: str, as_of: datetime) -> None:
         if symbol not in pending and loop.time() >= retry_at.get(symbol, 0):
@@ -55,10 +57,16 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
             pending.add(symbol)
 
     async def load() -> None:
+        nonlocal next_start
         while True:
             symbol, as_of = await queue.get()
             scanner = scanners[symbol]
             try:
+                async with pace_lock:
+                    delay = next_start - loop.time()
+                    if delay > 0:
+                        await asyncio.sleep(delay)
+                    next_start = loop.time() + 0.2
                 payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
                 seed_history(scanner, payload, as_of, incremental=True)
             except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
@@ -66,15 +74,16 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
                 retry_at[symbol] = loop.time() + 10
             finally:
                 pending.remove(symbol)
-            await asyncio.sleep(0.2)
 
-    task = asyncio.create_task(load())
+    tasks = [asyncio.create_task(load()) for _ in range(min(3, len(scanners)))]
     try:
         yield request
     finally:
-        task.cancel()
-        with suppress(asyncio.CancelledError):
-            await task
+        for task in tasks:
+            task.cancel()
+        for task in tasks:
+            with suppress(asyncio.CancelledError):
+                await task
 
 
 async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration: int | None,
