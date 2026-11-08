@@ -218,6 +218,13 @@ zero history errors, reconnects, or restarts. First full coverage was
 20.45s after the first sample. A matching 30-minute run
 (`emalert-soak-50`) started at 04:46 Shanghai time on November 9.
 
+The 30-minute run passed the expansion gate: 344/347 steady samples
+(99.14%) had all 50 fresh. It exited cleanly after 1,800.77s with 50/50
+fresh, five persisted alerts, SQLite integrity OK, and zero reconnects,
+REST errors, or container restarts. ADA_USDT, FARTCOIN_USDT, and WLD_USDT
+each recovered by the next five-second sample; raw tickers stayed fresh.
+Next, verify an opt-in 50-symbol continuous Compose startup.
+
 Generate a fresh ranked `EMALERT_WATCH` for bounded probes with
 `python -m scripts.build_watchlist --count 50`. The output contains the
 49 additional contracts, excluding the separately configured primary.
