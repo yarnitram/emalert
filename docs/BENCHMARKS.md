@@ -59,3 +59,9 @@ exit, only 13 of 20 profiles on the short run and 15 of 20 on the longer run
 met the 30s threshold. Neither run persisted a live alert. Continuous
 freshness through rollover and shutdown needs further investigation before
 expanding live coverage.
+
+Follow-up compared the persisted heartbeat times against each configured
+processing deadline. All 20 were fresh at both deadlines. Container exit
+followed 10.47s and 10.62s later, enough to age some past the 30s threshold.
+With a two-second WebSocket close timeout, a repeat of the 35s probe exited
+after 35.55s with 20/20 fresh, no interruptions, and SQLite quick check OK.

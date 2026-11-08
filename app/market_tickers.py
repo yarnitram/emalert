@@ -59,7 +59,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
         async with asyncio.timeout(duration):
             while True:
                 try:
-                    async with connect("wss://contract.mexc.com/edge", open_timeout=10,
+                    async with connect("wss://contract.mexc.com/edge", open_timeout=10, close_timeout=2,
                                        max_queue=4, max_size=4_000_000) as socket:
                         await socket.send('{"method":"sub.tickers","param":{},"gzip":false}')
                         for symbol in priority:
