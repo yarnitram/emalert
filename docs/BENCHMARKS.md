@@ -218,6 +218,12 @@ zero history errors, reconnects, or restarts. First full coverage was
 20.45s after the first sample. A matching 30-minute run
 (`emalert-soak-50`) started at 04:46 Shanghai time on November 9.
 
+Generate a fresh ranked `EMALERT_WATCH` for bounded probes with
+`python -m scripts.build_watchlist --count 50`. The output contains the
+49 additional contracts, excluding the separately configured primary.
+Live selection and deterministic ranking were verified. The running soak
+keeps its original watchlist for comparability.
+
 ## 500-symbol offline profile
 
 Run `python -m scripts.benchmark_replay --symbols 500 --frames 180 --market-size 1310 --sqlite`.
