@@ -212,7 +212,8 @@ if __name__ == "__main__":
 
         scanners = {symbol: OfflineScanner(symbol, seconds, args.ema, size) for symbol, size in symbols.items()}
         try:
-            asyncio.run(scan_market(scanners, path, duration, priority))
+            asyncio.run(scan_market(scanners, path, duration, priority,
+                                    history_spacing=0.15 if args.probe_100 else 0.2))
         except TimeoutError:
             print("Market probe window ended.")
         except KeyboardInterrupt:

@@ -44,7 +44,7 @@ def decode_market_tickers(message: dict, symbols: set[str]) -> dict[str, Tick]:
 
 
 @asynccontextmanager
-async def history_worker(scanners: dict[str, OfflineScanner]):
+async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0.2):
     queue: asyncio.Queue[tuple[str, datetime, float]] = asyncio.Queue(maxsize=len(scanners))
     pending: set[str] = set()
     retry_at: dict[str, float] = {}
@@ -69,7 +69,7 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
                     delay = next_start - loop.time()
                     if delay > 0:
                         await asyncio.sleep(delay)
-                    next_start = loop.time() + 0.2
+                    next_start = loop.time() + spacing
                 started_at = loop.time()
                 payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
                 seed_history(scanner, payload, as_of, incremental=True)
@@ -108,7 +108,7 @@ async def history_worker(scanners: dict[str, OfflineScanner]):
 
 
 async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration: int | None,
-                      priority: tuple[str, ...] = ()) -> None:
+                      priority: tuple[str, ...] = (), *, history_spacing: float = 0.2) -> None:
     from websockets.asyncio.client import connect
     from websockets.exceptions import WebSocketException
     from .live import decode_trades
@@ -136,7 +136,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
             )
             last_gate_log[symbol] = now
 
-        async with asyncio.timeout(duration), history_worker(scanners) as request_history:
+        async with asyncio.timeout(duration), history_worker(scanners, history_spacing) as request_history:
             while True:
                 try:
                     async with connect("wss://contract.mexc.com/edge", open_timeout=10, close_timeout=2,

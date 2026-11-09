@@ -220,6 +220,14 @@ The watchlist builder selected 99 additions above a 1,000,000 reported
 24h turnover floor, with BTC_USDT as the primary. The continuous cap
 remains 50 opt-in and 20 by default.
 
+The initial 100-symbol probe finished with 100/100 fresh at exit, four
+persisted alerts, and SQLite integrity OK. It had 23/26 (88.46%)
+all-fresh steady samples. Raw ticker timestamps stayed fresh during
+all five stale symbol readings. Example late refreshes waited 11–13s
+in the queue and took under 0.5s to fetch and apply. The bounded
+100-symbol probe now starts requests 150ms apart (about 6.7/s), still
+with at most three in flight. Continuous settings are unchanged.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was
