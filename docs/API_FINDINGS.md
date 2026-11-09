@@ -1,5 +1,12 @@
 # MEXC API Findings
 
+Futures `sub.kline` accepted BTC_USDT, ETH_USDT, and SOL_USDT Min1
+subscriptions on one connection. The last streamed close agreed with
+the REST closed candle in 9/9 comparisons across three minute boundaries.
+The documented frame has no explicit final-close flag. The probe does
+not establish delivery completeness or futures subscription limits.
+See the [official K-line documentation](https://www.mexc.com/api-docs/futures/websocket-api/k-line-data).
+
 Status: Partial — REST contract discovery, BTC_USDT candle history, and one futures trade subscription were verified.
 
 | Area | Documentation claim | Observed behavior | Status |

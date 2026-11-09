@@ -254,6 +254,12 @@ reconnects, or restarts were logged. The short result does not clear the
 99% full-soak gate. The next experiment should reduce the number of
 synchronous REST refreshes required per boundary.
 
+Run `python -m scripts.probe_kline --boundaries 2` to compare streamed
+and REST candle closes. BTC_USDT, ETH_USDT, and SOL_USDT matched 9/9
+times across three live 1m boundaries. Production EMA state continues
+to use REST-confirmed closes. Next, shadow the candidate feed across
+more symbols and capture missing, late, and differing closes.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was
