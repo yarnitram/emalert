@@ -9,6 +9,11 @@ An eight-symbol repeat received 16/16 adjacent Min1 transitions across
 two boundaries. Every candidate close matched REST, with no missing
 comparisons, skipped transitions, or observed late frames. REST checks
 ran after collection so they did not block WebSocket receipt.
+A five-symbol probe closed and reopened the socket after its first
+boundary, then collected two more boundaries with an empty buffer.
+BTC_USDT, ETC_USDT, ICP_USDT, STX_USDT, and KORU_USDT matched REST
+15/15 times. No late frames or skipped transitions were observed within
+either connection. The planned disconnect did not straddle a minute boundary.
 See the [official K-line documentation](https://www.mexc.com/api-docs/futures/websocket-api/k-line-data).
 
 Status: Partial — REST contract discovery, BTC_USDT candle history, and one futures trade subscription were verified.

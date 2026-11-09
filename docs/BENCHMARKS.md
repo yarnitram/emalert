@@ -267,6 +267,13 @@ validates this sample and leaves finality and wider subscription capacity
 open. The next step is a sustained shadow comparison through reconnects
 and quieter contracts before changing the source of EMA closes.
 
+The reconnect shadow check matched 15/15 closes across five symbols and
+three minute boundaries. Reproduce with `python -m scripts.probe_kline
+--boundaries 3 --reconnect --symbols BTC_USDT ETC_USDT ICP_USDT STX_USDT
+KORU_USDT` on one command line. A deliberately timed disconnect across a
+boundary and validation of a REST fallback are still required before the
+candidate stream can be used in the live worker.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was

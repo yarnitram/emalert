@@ -67,8 +67,26 @@ async def receive(symbols, boundaries, previous, candidates, counts, late, skipp
                     counts[symbol] += 1
 
 
-async def probe(symbols: tuple[str, ...], boundaries: int) -> None:
-    candidates, counts, late, skipped = await collect(symbols, boundaries)
+async def probe(symbols: tuple[str, ...], boundaries: int, reconnect: bool = False) -> None:
+    candidates = {}
+    counts: Counter = Counter()
+    late: Counter = Counter()
+    skipped: Counter = Counter()
+    sessions = (1, boundaries - 1) if reconnect else (boundaries,)
+    missing = {}
+    for index, requested in enumerate(sessions, start=1):
+        if index > 1:
+            print("Reconnecting with an empty candle buffer.", flush=True)
+        captured, received, late_frames, skipped_frames = await collect(symbols, requested)
+        for symbol in symbols:
+            if received[symbol] < requested:
+                missing[f"session_{index}:{symbol}"] = requested - received[symbol]
+        for key, close in captured.items():
+            if key not in candidates:
+                counts[key[0]] += 1
+                candidates[key] = close
+        late.update(late_frames)
+        skipped.update(skipped_frames)
     matches = 0
     for (symbol, start), streamed in candidates.items():
         scanner = OfflineScanner(symbol, 60, 1, Decimal("0.1"))
@@ -83,7 +101,7 @@ async def probe(symbols: tuple[str, ...], boundaries: int) -> None:
         matches += matched
         print(f"{symbol} bucket={start} websocket={streamed} rest={confirmed} match={matched}", flush=True)
         await asyncio.sleep(0.2)
-    missing = {symbol: boundaries - counts[symbol] for symbol in symbols if counts[symbol] < boundaries}
+    missing.update({symbol: boundaries - counts[symbol] for symbol in symbols if counts[symbol] < boundaries})
     print(json.dumps({"matched": matches, "compared": len(candidates), "missing": missing,
                       "late_frames": dict(late), "skipped_transitions": dict(skipped)}))
     if matches != len(candidates) or missing or skipped:
@@ -94,7 +112,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--boundaries", type=int, choices=range(1, 4), default=1)
     parser.add_argument("--symbols", nargs="+", default=SYMBOLS)
+    parser.add_argument("--reconnect", action="store_true",
+                        help="Close and reopen the socket after collecting the first boundary")
     args = parser.parse_args()
     if len(args.symbols) > 10 or len(set(args.symbols)) != len(args.symbols):
         parser.error("Use up to ten unique symbols")
-    asyncio.run(probe(tuple(args.symbols), args.boundaries))
+    if args.reconnect and args.boundaries < 2:
+        parser.error("--reconnect requires at least two boundaries")
+    asyncio.run(probe(tuple(args.symbols), args.boundaries, args.reconnect))
