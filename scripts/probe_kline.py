@@ -10,7 +10,7 @@ from decimal import Decimal
 
 from websockets.asyncio.client import connect
 
-from app.history import fetch_history
+from app.history import fetch_history, seed_history
 from app.scanner import OfflineScanner
 
 SYMBOLS = ("BTC_USDT", "ETH_USDT", "SOL_USDT")
@@ -108,15 +108,47 @@ async def probe(symbols: tuple[str, ...], boundaries: int, reconnect: bool = Fal
         raise SystemExit(1)
 
 
+async def probe_gap(symbol: str) -> None:
+    before, _, _, _ = await collect((symbol,), 1)
+    if not before:
+        raise RuntimeError("No candle transition before disconnect")
+    (_, prior), close = next(iter(before.items()))
+    scanner = OfflineScanner(symbol, 60, 1, Decimal("0.1"))
+    scanner.close(datetime.fromtimestamp(prior, timezone.utc), close)
+    print(f"{symbol} disconnecting for 65 seconds after bucket {prior}", flush=True)
+    await asyncio.sleep(65)
+    after, _, _, _ = await collect((symbol,), 1)
+    if not after:
+        raise RuntimeError("No candle transition after reconnect")
+    (_, latest), streamed = next(iter(after.items()))
+    if latest - prior < 120:
+        raise RuntimeError("Disconnect did not leave an unobserved closed bucket")
+    as_of = datetime.fromtimestamp(latest + 60, timezone.utc)
+    payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
+    count = seed_history(scanner, payload, as_of, incremental=True)
+    if count != (latest - prior) // 60 or scanner.ema.value != streamed:
+        raise RuntimeError("REST gap fill did not reach the latest streamed close")
+    if seed_history(scanner, payload, as_of, incremental=True) != 0:
+        raise RuntimeError("Repeated recovery applied a duplicate candle")
+    print(f"{symbol} REST filled {count} closes through {latest}; duplicate replay applied zero.", flush=True)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--boundaries", type=int, choices=range(1, 4), default=1)
     parser.add_argument("--symbols", nargs="+", default=SYMBOLS)
     parser.add_argument("--reconnect", action="store_true",
                         help="Close and reopen the socket after collecting the first boundary")
+    parser.add_argument("--gap", action="store_true",
+                        help="Test a boundary-spanning disconnect with one symbol")
     args = parser.parse_args()
     if len(args.symbols) > 10 or len(set(args.symbols)) != len(args.symbols):
         parser.error("Use up to ten unique symbols")
     if args.reconnect and args.boundaries < 2:
         parser.error("--reconnect requires at least two boundaries")
-    asyncio.run(probe(tuple(args.symbols), args.boundaries, args.reconnect))
+    if args.gap:
+        if len(args.symbols) != 1 or args.reconnect or args.boundaries != 1:
+            parser.error("--gap requires exactly one symbol and no other probe options")
+        asyncio.run(probe_gap(args.symbols[0]))
+    else:
+        asyncio.run(probe(tuple(args.symbols), args.boundaries, args.reconnect))

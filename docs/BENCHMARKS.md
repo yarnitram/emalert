@@ -274,6 +274,12 @@ KORU_USDT` on one command line. A deliberately timed disconnect across a
 boundary and validation of a REST fallback are still required before the
 candidate stream can be used in the live worker.
 
+The boundary-spanning gap probe passed with
+`python -m scripts.probe_kline --gap --symbols BTC_USDT`.
+REST filled two closes after a 65s disconnect and applied zero on replay.
+Next, implement a guarded candle source with explicit continuity checks
+and REST fallback before attempting a full 100-symbol soak.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was

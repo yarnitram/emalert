@@ -14,6 +14,12 @@ boundary, then collected two more boundaries with an empty buffer.
 BTC_USDT, ETC_USDT, ICP_USDT, STX_USDT, and KORU_USDT matched REST
 15/15 times. No late frames or skipped transitions were observed within
 either connection. The planned disconnect did not straddle a minute boundary.
+
+A subsequent BTC_USDT probe disconnected for 65 seconds across a
+minute boundary. Incremental REST recovery applied two confirmed closes,
+including the unobserved bucket, and the latest close matched the
+post-reconnect stream. Replaying the same recovery payload applied zero
+additional closes. This was an isolated probe, not a production feed switch.
 See the [official K-line documentation](https://www.mexc.com/api-docs/futures/websocket-api/k-line-data).
 
 Status: Partial — REST contract discovery, BTC_USDT candle history, and one futures trade subscription were verified.
