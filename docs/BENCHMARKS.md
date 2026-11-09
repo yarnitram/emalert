@@ -245,6 +245,15 @@ at clean exit, with two persisted alerts and SQLite integrity OK. All six
 stale symbol readings had fresh raw tickers. Continuous 100 remains gated
 on resolving rollover gaps and passing a full soak.
 
+Oldest-observation-first scheduling was verified in an injected regression
+and a repeat on the same 100-symbol list. Full coverage arrived 25.50s
+after the first sample. Steady freshness was 29/30 (96.67%), with one
+stale symbol reading despite fresh raw data. All 100 were fresh at clean
+exit; 13 alerts persisted, SQLite integrity passed, and no history errors,
+reconnects, or restarts were logged. The short result does not clear the
+99% full-soak gate. The next experiment should reduce the number of
+synchronous REST refreshes required per boundary.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was

@@ -45,7 +45,9 @@ def decode_market_tickers(message: dict, symbols: set[str]) -> dict[str, Tick]:
 
 @asynccontextmanager
 async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0.2):
-    queue: asyncio.Queue[tuple[str, datetime, float]] = asyncio.Queue(maxsize=len(scanners))
+    queue: asyncio.PriorityQueue[tuple[float, float, str, datetime]] = asyncio.PriorityQueue(
+        maxsize=len(scanners)
+    )
     pending: set[str] = set()
     retry_at: dict[str, float] = {}
     fast_retry_bucket: dict[str, datetime] = {}
@@ -54,15 +56,15 @@ async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0
     next_start = 0.0
     current_spacing = spacing
 
-    def request(symbol: str, as_of: datetime) -> None:
+    def request(symbol: str, as_of: datetime, last_processed_at: float = 0.0) -> None:
         if symbol not in pending and loop.time() >= retry_at.get(symbol, 0):
-            queue.put_nowait((symbol, as_of, loop.time()))
+            queue.put_nowait((last_processed_at, loop.time(), symbol, as_of))
             pending.add(symbol)
 
     async def load() -> None:
         nonlocal next_start, current_spacing
         while True:
-            symbol, as_of, queued_at = await queue.get()
+            _, queued_at, symbol, as_of = await queue.get()
             scanner = scanners[symbol]
             rollover = scanner.ema.value is not None
             try:
@@ -212,7 +214,7 @@ async def scan_market(scanners: dict[str, OfflineScanner], path: Path, duration:
                                 if scanner.closed_bucket != previous_bucket(bucket, scanner.seconds):
                                     report_gate(symbol, "confirmed_history", bucket)
                                     if scanner.closed_bucket is None or scanner.closed_bucket < bucket:
-                                        request_history(symbol, tick.event_time)
+                                        request_history(symbol, tick.event_time, last_processed.get(symbol, 0.0))
                                     continue
                                 if reported.get(symbol) != tick.feed_tier:
                                     print(f"{symbol} feed: {tick.feed_tier}", flush=True)

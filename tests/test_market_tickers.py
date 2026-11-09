@@ -201,3 +201,30 @@ def test_exchange_throttle_pauses_other_history_requests(monkeypatch):
     asyncio.run(exercise())
     assert len(attempts) == 2
     assert attempts[1] - attempts[0] >= 2
+
+
+def test_history_queue_serves_oldest_observation_first(monkeypatch):
+    at = datetime.fromtimestamp(120, timezone.utc)
+    scanners = {
+        symbol: OfflineScanner(symbol, 60, 2, Decimal("0.01"))
+        for symbol in ("BTC_USDT", "ETH_USDT")
+    }
+    order = []
+
+    async def exercise():
+        complete = asyncio.Event()
+
+        async def fetch_in_thread(function, scanner, as_of, *, incremental):
+            order.append(scanner.symbol)
+            if len(order) == 2:
+                complete.set()
+            return {"success": True, "code": 0, "data": {"time": [0, 60], "close": [90, 110]}}
+
+        monkeypatch.setattr("app.market_tickers.asyncio.to_thread", fetch_in_thread)
+        async with asyncio.timeout(3), history_worker(scanners) as request:
+            request("BTC_USDT", at, last_processed_at=20)
+            request("ETH_USDT", at, last_processed_at=10)
+            await complete.wait()
+
+    asyncio.run(exercise())
+    assert order == ["ETH_USDT", "BTC_USDT"]
