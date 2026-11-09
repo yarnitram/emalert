@@ -212,6 +212,14 @@ turnover, with tick sizes from contract metadata. Collect five-second
 freshness samples and the final soak report before considering a longer run.
 The probe-only flag is rejected in continuous mode.
 
+The `--probe-100` flag is bounded to 300 seconds and cannot run
+continuously. With 200ms spacing, 100 REST starts require about 20s
+before fetch, exchange data arrival, or retry delays. The first
+100-symbol probe began at 19:08 Shanghai time on November 9 for 180s.
+The watchlist builder selected 99 additions above a 1,000,000 reported
+24h turnover floor, with BTC_USDT as the primary. The continuous cap
+remains 50 opt-in and 20 by default.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was

@@ -57,7 +57,7 @@ def fetch(endpoint: str) -> list[dict]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--count", type=int, choices=(20, 30, 50), default=20)
+    parser.add_argument("--count", type=int, choices=(20, 30, 50, 100), default=20)
     parser.add_argument("--primary", default="BTC_USDT")
     parser.add_argument("--min-turnover", type=Decimal, default=Decimal(0),
                         help="Minimum reported 24h turnover for additional contracts")

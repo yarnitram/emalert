@@ -165,6 +165,8 @@ if __name__ == "__main__":
                        help="Allow up to 30 symbols in a bounded market ticker probe")
     probe.add_argument("--probe-50", action="store_true",
                        help="Allow up to 50 symbols in a bounded market ticker probe")
+    probe.add_argument("--probe-100", action="store_true",
+                       help="Allow up to 100 symbols in a market ticker probe of at most five minutes")
     parser.add_argument("--market-limit", type=int, choices=(20, 30, 50),
                         default=os.getenv("EMALERT_MARKET_LIMIT", "20"),
                         help="Select the supported shared ticker watchlist limit")
@@ -182,8 +184,10 @@ if __name__ == "__main__":
             symbols[symbol] = Decimal(size)
         except ArithmeticError:
             parser.error("Invalid tick size")
-    if (args.probe_30 or args.probe_50) and (not args.market_tickers or args.continuous):
+    if (args.probe_30 or args.probe_50 or args.probe_100) and (not args.market_tickers or args.continuous):
         parser.error("Expanded probes require bounded market ticker mode")
+    if args.probe_100 and args.duration > 300:
+        parser.error("--probe-100 requires a duration of at most 300 seconds")
     if args.market_limit != 20 and not args.market_tickers:
         parser.error("--market-limit requires market ticker mode")
     limit = args.market_limit if args.market_tickers else 5
@@ -191,6 +195,8 @@ if __name__ == "__main__":
         limit = 30
     elif args.probe_50:
         limit = 50
+    elif args.probe_100:
+        limit = 100
     if len(symbols) > limit or args.duration <= 0:
         parser.error(f"Use at most {limit} symbols and a positive duration")
     if priority and (not args.market_tickers or len(priority) > 3
