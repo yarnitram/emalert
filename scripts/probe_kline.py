@@ -3,6 +3,8 @@
 import argparse
 import asyncio
 import json
+from collections import Counter
+from contextlib import suppress
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -14,19 +16,27 @@ from app.scanner import OfflineScanner
 SYMBOLS = ("BTC_USDT", "ETH_USDT", "SOL_USDT")
 
 
-async def probe(boundaries: int) -> None:
+async def collect(symbols: tuple[str, ...], boundaries: int):
     previous: dict[str, tuple[int, Decimal]] = {}
-    checked = set()
-    matches = 0
+    candidates: dict[tuple[str, int], Decimal] = {}
+    counts: Counter = Counter()
+    late: Counter = Counter()
+    skipped: Counter = Counter()
+    with suppress(TimeoutError):
+        await receive(symbols, boundaries, previous, candidates, counts, late, skipped)
+    return candidates, counts, late, skipped
+
+
+async def receive(symbols, boundaries, previous, candidates, counts, late, skipped):
     async with asyncio.timeout(60 * boundaries + 25):
         async with connect("wss://contract.mexc.com/edge", open_timeout=10, close_timeout=2) as socket:
-            for symbol in SYMBOLS:
+            for symbol in symbols:
                 await socket.send(json.dumps({"method": "sub.kline",
                                               "param": {"symbol": symbol, "interval": "Min1"},
                                               "gzip": False}))
             loop = asyncio.get_running_loop()
             ping_at = loop.time()
-            while len(checked) < len(SYMBOLS) * boundaries:
+            while len(candidates) < len(symbols) * boundaries:
                 if loop.time() >= ping_at:
                     await socket.send('{"method":"ping"}')
                     ping_at = loop.time() + 15
@@ -39,35 +49,52 @@ async def probe(boundaries: int) -> None:
                     continue
                 row = message["data"]
                 symbol = row["symbol"]
-                if symbol not in SYMBOLS or row["interval"] != "Min1":
+                if symbol not in symbols or row["interval"] != "Min1":
                     continue
                 start, close = int(row["t"]), Decimal(str(row["c"]))
                 old = previous.get(symbol)
                 if old is not None and start < old[0]:
+                    late[symbol] += 1
                     continue
                 previous[symbol] = (start, close)
-                if old is None or start != old[0] + 60 or (symbol, old[0]) in checked:
+                if old is None or start == old[0]:
                     continue
-                if sum(checked_symbol == symbol for checked_symbol, _ in checked) >= boundaries:
+                if start != old[0] + 60:
+                    skipped[symbol] += 1
                     continue
-                scanner = OfflineScanner(symbol, 60, 1, Decimal("0.1"))
-                scanner.close(datetime.fromtimestamp(old[0] - 60, timezone.utc), Decimal(1))
-                payload = await asyncio.to_thread(
-                    fetch_history, scanner, datetime.fromtimestamp(start, timezone.utc), incremental=True,
-                )
-                data = payload.get("data") if payload.get("success") else None
-                values = dict(zip(data["time"], data["close"], strict=True)) if data else {}
-                confirmed = values.get(old[0])
-                matched = confirmed is not None and Decimal(str(confirmed)) == old[1]
-                matches += matched
-                checked.add((symbol, old[0]))
-                print(f"{symbol} bucket={old[0]} websocket={old[1]} rest={confirmed} match={matched}", flush=True)
-    print(f"Matched {matches}/{len(checked)}; observations do not establish finality.")
-    if matches != len(checked):
+                if counts[symbol] < boundaries:
+                    candidates[symbol, old[0]] = old[1]
+                    counts[symbol] += 1
+
+
+async def probe(symbols: tuple[str, ...], boundaries: int) -> None:
+    candidates, counts, late, skipped = await collect(symbols, boundaries)
+    matches = 0
+    for (symbol, start), streamed in candidates.items():
+        scanner = OfflineScanner(symbol, 60, 1, Decimal("0.1"))
+        scanner.close(datetime.fromtimestamp(start - 60, timezone.utc), Decimal(1))
+        payload = await asyncio.to_thread(
+            fetch_history, scanner, datetime.fromtimestamp(start + 60, timezone.utc), incremental=True,
+        )
+        data = payload.get("data") if payload.get("success") else None
+        values = dict(zip(data["time"], data["close"], strict=True)) if data else {}
+        confirmed = values.get(start)
+        matched = confirmed is not None and Decimal(str(confirmed)) == streamed
+        matches += matched
+        print(f"{symbol} bucket={start} websocket={streamed} rest={confirmed} match={matched}", flush=True)
+        await asyncio.sleep(0.2)
+    missing = {symbol: boundaries - counts[symbol] for symbol in symbols if counts[symbol] < boundaries}
+    print(json.dumps({"matched": matches, "compared": len(candidates), "missing": missing,
+                      "late_frames": dict(late), "skipped_transitions": dict(skipped)}))
+    if matches != len(candidates) or missing or skipped:
         raise SystemExit(1)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--boundaries", type=int, choices=range(1, 4), default=1)
-    asyncio.run(probe(parser.parse_args().boundaries))
+    parser.add_argument("--symbols", nargs="+", default=SYMBOLS)
+    args = parser.parse_args()
+    if len(args.symbols) > 10 or len(set(args.symbols)) != len(args.symbols):
+        parser.error("Use up to ten unique symbols")
+    asyncio.run(probe(tuple(args.symbols), args.boundaries))

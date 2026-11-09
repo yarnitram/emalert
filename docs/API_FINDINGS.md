@@ -5,6 +5,10 @@ subscriptions on one connection. The last streamed close agreed with
 the REST closed candle in 9/9 comparisons across three minute boundaries.
 The documented frame has no explicit final-close flag. The probe does
 not establish delivery completeness or futures subscription limits.
+An eight-symbol repeat received 16/16 adjacent Min1 transitions across
+two boundaries. Every candidate close matched REST, with no missing
+comparisons, skipped transitions, or observed late frames. REST checks
+ran after collection so they did not block WebSocket receipt.
 See the [official K-line documentation](https://www.mexc.com/api-docs/futures/websocket-api/k-line-data).
 
 Status: Partial — REST contract discovery, BTC_USDT candle history, and one futures trade subscription were verified.

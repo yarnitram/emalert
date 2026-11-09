@@ -260,6 +260,13 @@ times across three live 1m boundaries. Production EMA state continues
 to use REST-confirmed closes. Next, shadow the candidate feed across
 more symbols and capture missing, late, and differing closes.
 
+The eight-symbol shadow probe matched all 16 closes across two additional
+live minute boundaries, with no missing comparisons, skipped transitions,
+or observed late frames. The probe supports up to ten symbols. The result
+validates this sample and leaves finality and wider subscription capacity
+open. The next step is a sustained shadow comparison through reconnects
+and quieter contracts before changing the source of EMA closes.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was
