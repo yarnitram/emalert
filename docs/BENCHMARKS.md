@@ -223,7 +223,9 @@ The 30-minute run passed the expansion gate: 344/347 steady samples
 fresh, five persisted alerts, SQLite integrity OK, and zero reconnects,
 REST errors, or container restarts. ADA_USDT, FARTCOIN_USDT, and WLD_USDT
 each recovered by the next five-second sample; raw tickers stayed fresh.
-Next, verify an opt-in 50-symbol continuous Compose startup.
+Opt-in continuous Compose startup with `EMALERT_MARKET_LIMIT=50`
+reported 50/50 fresh. All 27 tests passed in the same image. The default
+remains 20.
 
 Generate a fresh ranked `EMALERT_WATCH` for bounded probes with
 `python -m scripts.build_watchlist --count 50`. The output contains the

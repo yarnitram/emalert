@@ -165,12 +165,12 @@ if __name__ == "__main__":
                        help="Allow up to 30 symbols in a bounded market ticker probe")
     probe.add_argument("--probe-50", action="store_true",
                        help="Allow up to 50 symbols in a bounded market ticker probe")
-    parser.add_argument("--market-limit", type=int, choices=(20, 30),
+    parser.add_argument("--market-limit", type=int, choices=(20, 30, 50),
                         default=os.getenv("EMALERT_MARKET_LIMIT", "20"),
                         help="Select the supported shared ticker watchlist limit")
     args = parser.parse_args()
-    if args.market_limit not in (20, 30):
-        parser.error("EMALERT_MARKET_LIMIT must be 20 or 30")
+    if args.market_limit not in (20, 30, 50):
+        parser.error("EMALERT_MARKET_LIMIT must be 20, 30, or 50")
     priority = tuple(filter(None, os.getenv("EMALERT_PRIORITY_TRADES", "").split(",")))
     symbols = {args.symbol: args.tick_size}
     configured_watch = os.getenv("EMALERT_WATCH", "")
