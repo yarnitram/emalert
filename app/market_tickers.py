@@ -11,7 +11,7 @@ from urllib.error import HTTPError, URLError
 from .candles import bucket_start, previous_bucket
 from .checkpoint import CheckpointedScanner, persist_alerts
 from .feed_status import FeedStatus
-from .history import fetch_history, seed_history
+from .history import CandleRequestRejected, fetch_history, seed_history
 from .models import Tick
 from .scanner import OfflineScanner
 
@@ -52,6 +52,7 @@ async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0
     loop = asyncio.get_running_loop()
     pace_lock = asyncio.Lock()
     next_start = 0.0
+    current_spacing = spacing
 
     def request(symbol: str, as_of: datetime) -> None:
         if symbol not in pending and loop.time() >= retry_at.get(symbol, 0):
@@ -59,7 +60,7 @@ async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0
             pending.add(symbol)
 
     async def load() -> None:
-        nonlocal next_start
+        nonlocal next_start, current_spacing
         while True:
             symbol, as_of, queued_at = await queue.get()
             scanner = scanners[symbol]
@@ -67,9 +68,10 @@ async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0
             try:
                 async with pace_lock:
                     delay = next_start - loop.time()
-                    if delay > 0:
+                    while delay > 0:
                         await asyncio.sleep(delay)
-                    next_start = loop.time() + spacing
+                        delay = next_start - loop.time()
+                    next_start = loop.time() + current_spacing
                 started_at = loop.time()
                 payload = await asyncio.to_thread(fetch_history, scanner, as_of, incremental=True)
                 seed_history(scanner, payload, as_of, incremental=True)
@@ -84,6 +86,18 @@ async def history_worker(scanners: dict[str, OfflineScanner], spacing: float = 0
                     )
             except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
                 print(f"{symbol} history unavailable: {exc}", flush=True)
+                throttled = (
+                    isinstance(exc, CandleRequestRejected) and exc.code == 510
+                    or isinstance(exc, HTTPError) and exc.code == 429
+                )
+                if throttled:
+                    retry_after = exc.headers.get("Retry-After", "") if isinstance(exc, HTTPError) and exc.headers else ""
+                    pause = max(2, int(retry_after)) if retry_after.isascii() and retry_after.isdecimal() else 2
+                    current_spacing = max(current_spacing, 0.25)
+                    next_start = max(next_start, loop.time() + pause)
+                    retry_at[symbol] = loop.time() + max(10, pause)
+                    print(f"History rate limited: pausing shared requests for {pause}s", flush=True)
+                    continue
                 bucket = bucket_start(as_of, scanner.seconds)
                 transient = (isinstance(exc, URLError) and not isinstance(exc, HTTPError)
                              or isinstance(exc, TimeoutError)

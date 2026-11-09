@@ -18,12 +18,18 @@ TIMEFRAMES = {
 }
 
 
+class CandleRequestRejected(ValueError):
+    def __init__(self, code: int | None):
+        self.code = code
+        suffix = f" (code {code})" if code is not None else ""
+        super().__init__(f"MEXC rejected candle request{suffix}")
+
+
 def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime,
                  *, incremental: bool = False) -> int:
     if payload.get("success") is not True or payload.get("code") != 0:
         code = payload.get("code")
-        suffix = f" (code {code})" if type(code) is int else ""
-        raise ValueError(f"MEXC rejected candle request{suffix}")
+        raise CandleRequestRejected(code if type(code) is int else None)
     data = payload["data"]
     rows = {}
     current = bucket_start(as_of, scanner.seconds)

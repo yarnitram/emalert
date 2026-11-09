@@ -169,3 +169,35 @@ def test_warmed_history_gets_one_fast_retry_after_transient_failure(monkeypatch)
 
     asyncio.run(exercise())
     assert attempts[1] - attempts[0] >= 1
+
+
+def test_exchange_throttle_pauses_other_history_requests(monkeypatch):
+    at = datetime.fromtimestamp(120, timezone.utc)
+    scanners = {
+        symbol: OfflineScanner(symbol, 60, 2, Decimal("0.01"))
+        for symbol in ("BTC_USDT", "ETH_USDT")
+    }
+    attempts = []
+
+    async def exercise():
+        loop = asyncio.get_running_loop()
+        second_started = asyncio.Event()
+
+        async def fetch_in_thread(function, scanner, as_of, *, incremental):
+            attempts.append(loop.time())
+            if scanner.symbol == "BTC_USDT":
+                return {"success": False, "code": 510}
+            second_started.set()
+            return {"success": True, "code": 0, "data": {"time": [0, 60], "close": [90, 110]}}
+
+        monkeypatch.setattr("app.market_tickers.asyncio.to_thread", fetch_in_thread)
+        async with asyncio.timeout(5), history_worker(scanners, 0.15) as request:
+            request("BTC_USDT", at)
+            request("ETH_USDT", at)
+            await second_started.wait()
+            assert scanners["BTC_USDT"].ema.value is None
+            assert scanners["ETH_USDT"].ema.value == 100
+
+    asyncio.run(exercise())
+    assert len(attempts) == 2
+    assert attempts[1] - attempts[0] >= 2

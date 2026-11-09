@@ -236,6 +236,15 @@ The prior log omitted exchange codes, so the cause is unconfirmed.
 Future rejections record numeric exchange codes. Keep the continuous
 limit at 50 pending rejection diagnosis and a full freshness soak.
 
+Adaptive handling pauses shared history requests on MEXC 510 or HTTP
+429 and slows subsequent starts to at least 250ms. The code-510 path
+passed an injected regression. The live rerun had zero candle rejections,
+so it did not identify the previous rejection codes or exercise throttling.
+It finished at 23/26 (88.46%) all-fresh steady samples and 100/100 fresh
+at clean exit, with two persisted alerts and SQLite integrity OK. All six
+stale symbol readings had fresh raw tickers. Continuous 100 remains gated
+on resolving rollover gaps and passing a full soak.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was
