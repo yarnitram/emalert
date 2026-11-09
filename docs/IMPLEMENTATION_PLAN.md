@@ -27,7 +27,8 @@ This plan is derived from `PRD.md` and `CODEX_START_PROMPT.md`.
 - [x] Run offline Docker tests in GitHub CI.
 - [x] Verify clean shutdown with an isolated live Docker worker. Compose stop produced a clean exit after trade reception.
 - [x] Review the one-hour hybrid run. It exited normally, with zero container restarts, four idle reconnects, all 20 profiles updated within 13 seconds of shutdown, SQLite quick check OK, and five persisted alerts. The run predates the reconnect backoff fix, which has a separate injected-disconnect regression test.
-- [ ] Verify weekly and monthly live candle rollover. Offline coverage and live warmup already pass for both.
+- [x] Verify weekly live candle rollover. The BTC_USDT probe advanced from 335 to 336 confirmed candles and exited normally. One earlier disconnect recovered, with zero container restarts. The refresh was logged at 23:58:03 UTC host time, consistent with the previously observed exchange clock offset near the Monday 00:00 UTC exchange boundary.
+- [ ] Verify monthly live candle rollover. Offline coverage, historical replay, and live warmup already passed.
 
 Telegram and Discord delivery remain deferred. The 100–300 symbol benchmark
 belongs to the scaling phase.
