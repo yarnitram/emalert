@@ -21,7 +21,9 @@ TIMEFRAMES = {
 def seed_history(scanner: OfflineScanner, payload: dict, as_of: datetime,
                  *, incremental: bool = False) -> int:
     if payload.get("success") is not True or payload.get("code") != 0:
-        raise ValueError("MEXC rejected candle request")
+        code = payload.get("code")
+        suffix = f" (code {code})" if type(code) is int else ""
+        raise ValueError(f"MEXC rejected candle request{suffix}")
     data = payload["data"]
     rows = {}
     current = bucket_start(as_of, scanner.seconds)

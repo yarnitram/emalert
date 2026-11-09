@@ -228,6 +228,14 @@ in the queue and took under 0.5s to fetch and apply. The bounded
 100-symbol probe now starts requests 150ms apart (about 6.7/s), still
 with at most three in flight. Continuous settings are unchanged.
 
+The 150ms repeat reached full coverage 25.74s after its first sample,
+versus 46.01s at 200ms. It had 29/30 (96.67%) all-fresh steady samples,
+100/100 fresh at clean exit, two alerts, and SQLite integrity OK.
+It logged ten exchange candle rejections with no WebSocket interruptions.
+The prior log omitted exchange codes, so the cause is unconfirmed.
+Future rejections record numeric exchange codes. Keep the continuous
+limit at 50 pending rejection diagnosis and a full freshness soak.
+
 The 150-second probe finished with all 25 steady-state samples fully fresh,
 50/50 fresh at clean exit, three persisted alerts, SQLite integrity OK, and
 zero history errors, reconnects, or restarts. First full coverage was
